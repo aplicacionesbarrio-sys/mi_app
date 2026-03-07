@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "279510411630",
+    "project_id": "barrio-seguro-b0692",
+    "storage_bucket": "barrio-seguro-b0692.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:279510411630:android:7697ed19c452ec1f27397f",
+        "android_client_info": {
+          "package_name": "com.barriovigilado.barriouroseguro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBmEqVgVSHHV5u_d0u0tmXZSQDYY-76rZY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

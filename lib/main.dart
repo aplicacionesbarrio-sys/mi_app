@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void main() {
   runApp(BarrioSeguroApp());
@@ -21,24 +22,24 @@ class InicioPage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Barrio Seguro'),
       ),
-body: Center(
-  child: Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Text(
-        'Bienvenido a Barrio Seguro',
-        style: TextStyle(fontSize: 24),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Bienvenido a Barrio Seguro',
+              style: TextStyle(fontSize: 24),
+            ),
+            SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                print("Alerta enviada al barrio");
+              },
+              child: Text("Enviar Alerta"),
+            ),
+          ],
+        ),
       ),
-      SizedBox(height: 30),
-      ElevatedButton(
-        onPressed: () {
-          print("Alerta enviada al barrio");
-        },
-        child: Text("Enviar Alerta"),
-      ),
-    ],
-  ),
-),
     );
   }
 }
