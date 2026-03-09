@@ -1,8 +1,1 @@
-{
-  "firestore": {
-    "database": "(default)",
-    "location": "southamerica-east1",
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  }
-}
+{"firestore":{"database":"(default)","location":"southamerica-east1","rules":"firestore.rules","indexes":"firestore.indexes.json"},"flutter":{"platforms":{"android":{"default":{"projectId":"barrio-seguro-b0692","appId":"1:279510411630:android:7697ed19c452ec1f27397f","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"barrio-seguro-b0692","configurations":{"android":"1:279510411630:android:7697ed19c452ec1f27397f","ios":"1:279510411630:ios:da5335eee77d2a2c27397f","macos":"1:279510411630:ios:da5335eee77d2a2c27397f","web":"1:279510411630:web:00ff48135d12ec1427397f","windows":"1:279510411630:web:d92960bffd26bee427397f"}}}}}}
