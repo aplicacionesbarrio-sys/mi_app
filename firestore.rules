@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function usuarioActivo() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.aprobado == true
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.suscripcionActiva == true
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.fechaVencimiento > request.time;
+    }
+
+    function esAdmin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == "admin";
+    }
+
+    // ===== USUARIOS =====
+    match /usuarios/{userId} {
+
+      // El usuario solo puede leer su propio documento
+      allow read: if request.auth != null 
+                  && request.auth.uid == userId;
+
+      // SOLO ADMIN puede modificar usuarios
+      allow write: if esAdmin();
+    }
+
+    // ===== ALERTAS =====
+    match /alertas/{alertaId} {
+      allow create: if usuarioActivo();
+      allow read: if usuarioActivo();
+    }
+
+    // ===== BARRIOS =====
+    match /barrios/{barrioId} {
+      allow read: if usuarioActivo();
+      allow write: if esAdmin();
+    }
+  }
+}
