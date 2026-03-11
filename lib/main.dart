@@ -2,6 +2,15 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+
+Future<void> obtenerUbicacion() async {
+  Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high);
+
+  print("Latitud: ${position.latitude}");
+  print("Longitud: ${position.longitude}");
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -9,7 +18,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
+  await obtenerUbicacion();
   runApp(const MyApp());
 }
 
@@ -32,16 +41,21 @@ class InicioPage extends StatefulWidget {
 }
 
 class _InicioPageState extends State<InicioPage> {
-  int alertas = 0;
+  int contadorAlertas = 5;
   List<String> historial = [];
 
   void enviarAlerta() {
     setState(() {
-      alertas++;
-      historial.add("Alerta #$alertas enviada");
+      contadorAlertas++;
+      historial.add("Alerta #$contadorAlertas enviada");
     });
 
-    print("ALERTA ENVIADA");
+    print("BOTON FUNCIONANDO");
+    FirebaseFirestore.instance.collection('alertas').add({
+      'numero': contadorAlertas,
+      'mensaje': 'Alerta enviada',
+      'fecha': DateTime.now(),
+    });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -64,7 +78,7 @@ class _InicioPageState extends State<InicioPage> {
             style: TextStyle(fontSize: 22),
           ),
           Text(
-            "$alertas",
+            "$contadorAlertas",
             style: const TextStyle(
               fontSize: 40,
               fontWeight: FontWeight.bold,
