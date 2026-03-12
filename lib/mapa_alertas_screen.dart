@@ -9,6 +9,24 @@ class MapaAlertasScreen extends StatefulWidget {
 }
 
 class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
+  final Set<Marker> _marcadores = {};
+  @override
+  void initState() {
+    super.initState();
+
+    _marcadores.add(
+      Marker(
+        markerId: MarkerId("alerta1"),
+        position: LatLng(-29.4131, -66.8558),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: InfoWindow(
+          title: "Robo",
+          snippet: "Alerta reportada",
+        ),
+      ),
+    );
+  }
+
   static const CameraPosition posicionInicial = CameraPosition(
     target: LatLng(-29.4131, -66.8558),
     zoom: 14,
@@ -22,6 +40,7 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
       ),
       body: GoogleMap(
         initialCameraPosition: posicionInicial,
+        markers: _marcadores,
       ),
     );
   }
