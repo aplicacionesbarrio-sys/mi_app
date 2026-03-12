@@ -3,14 +3,8 @@ import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
-
-Future<void> obtenerUbicacion() async {
-  Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high);
-
-  print("Latitud: ${position.latitude}");
-  print("Longitud: ${position.longitude}");
-}
+import 'package:url_launcher/url_launcher.dart';
+import 'mapa_alertas_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +12,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await obtenerUbicacion();
+
   runApp(const MyApp());
 }
 
@@ -28,7 +22,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      home: InicioPage(),
+      home: MapaAlertasScreen(),
     );
   }
 }
@@ -43,6 +37,25 @@ class InicioPage extends StatefulWidget {
 class _InicioPageState extends State<InicioPage> {
   int contadorAlertas = 5;
   List<String> historial = [];
+  double lat = 0;
+  double lng = 0;
+  @override
+  void initState() {
+    super.initState();
+    obtenerUbicacion();
+  }
+
+  Future<void> obtenerUbicacion() async {
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+
+    setState(() {
+      lat = position.latitude;
+      lng = position.longitude;
+    });
+    print("Latitud: $lat");
+    print("Longitud: $lng");
+  }
 
   void enviarAlerta() {
     setState(() {
@@ -53,15 +66,29 @@ class _InicioPageState extends State<InicioPage> {
     print("BOTON FUNCIONANDO");
     FirebaseFirestore.instance.collection('alertas').add({
       'numero': contadorAlertas,
-      'mensaje': 'Alerta enviada',
+      'tipo': 'robo',
+      'barrio': 'centro',
+      'nombre': 'vecino',
+      'telefono': '000000000',
+      'mensaje': '🚨 Robo reportado',
       'fecha': DateTime.now(),
+      'lat': lat,
+      'lng': lng,
+      'mapa': 'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("🚨 Alerta enviada al barrio"),
+        content: Text("🚨 Robo reportado"),
       ),
     );
+  }
+
+  Stream<QuerySnapshot> obtenerAlertas() {
+    return FirebaseFirestore.instance
+        .collection('alertas')
+        .orderBy('fecha', descending: true)
+        .snapshots();
   }
 
   @override
@@ -85,6 +112,7 @@ class _InicioPageState extends State<InicioPage> {
             ),
           ),
           const SizedBox(height: 20),
+          Text("Latitud: $lat"),
           ElevatedButton(
             onPressed: enviarAlerta,
             child: const Text("Enviar Alerta"),
@@ -95,16 +123,38 @@ class _InicioPageState extends State<InicioPage> {
             style: TextStyle(fontSize: 18),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: historial.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: const Icon(Icons.warning, color: Colors.red),
-                  title: Text(historial[index]),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: obtenerAlertas(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                var alertas = snapshot.data!.docs.toList();
+
+                return ListView.builder(
+                  itemCount: alertas.length,
+                  itemBuilder: (context, index) {
+                    var alerta = alertas[index];
+
+                    return ListTile(
+                      leading: const Icon(Icons.warning, color: Colors.red),
+                      title: Text(alerta['mensaje']),
+                      subtitle: Text("Tocar para abrir mapa"),
+                      onTap: () async {
+                        final url = Uri.parse(alerta['mapa']);
+
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      },
+                    );
+                  },
                 );
               },
             ),
-          ),
+          )
         ],
       ),
     );
