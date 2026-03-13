@@ -99,6 +99,7 @@ class _InicioPageState extends State<InicioPage> {
       ),
       body: Column(
         children: [
+          Image.asset('assets/icons/robo.png', width: 60),
           const SizedBox(height: 20),
           const Text(
             "Alertas en el barrio:",

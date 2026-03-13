@@ -10,15 +10,22 @@ class MapaAlertasScreen extends StatefulWidget {
 
 class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
   final Set<Marker> _marcadores = {};
+  BitmapDescriptor? iconoRobo;
   @override
   void initState() {
     super.initState();
+    BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(),
+      "assets/icons/robo.png",
+    ).then((icono) {
+      iconoRobo = icono;
+    });
 
     _marcadores.add(
       Marker(
         markerId: MarkerId("alerta1"),
         position: LatLng(-29.4131, -66.8558),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        icon: iconoRobo ?? BitmapDescriptor.defaultMarker,
         infoWindow: InfoWindow(
           title: "Robo",
           snippet: "Alerta reportada",
