@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -10,34 +11,54 @@ class MapaAlertasScreen extends StatefulWidget {
 
 class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
   final Set<Marker> _marcadores = {};
-  BitmapDescriptor? iconoRobo;
-  @override
-  void initState() {
-    super.initState();
-    BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(),
-      "assets/icons/robo.png",
-    ).then((icono) {
-      iconoRobo = icono;
-    });
-
-    _marcadores.add(
-      Marker(
-        markerId: MarkerId("alerta1"),
-        position: LatLng(-29.4131, -66.8558),
-        icon: iconoRobo ?? BitmapDescriptor.defaultMarker,
-        infoWindow: InfoWindow(
-          title: "Robo",
-          snippet: "Alerta reportada",
-        ),
-      ),
-    );
-  }
 
   static const CameraPosition posicionInicial = CameraPosition(
     target: LatLng(-29.4131, -66.8558),
     zoom: 14,
   );
+
+  BitmapDescriptor iconoRobo = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor iconoSiniestro = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor iconoSospechoso = BitmapDescriptor.defaultMarker;
+
+  @override
+  void initState() {
+    super.initState();
+    cargarIconos();
+    agregarMarcadorDemo();
+  }
+
+  Future cargarIconos() async {
+    iconoRobo = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(48, 48)),
+      "assets/icons/robo.png",
+    );
+
+    iconoSiniestro = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(48, 48)),
+      "assets/icons/siniestro.png",
+    );
+
+    iconoSospechoso = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(48, 48)),
+      "assets/icons/sospechoso.png",
+    );
+  }
+
+  void agregarMarcadorDemo() {
+    Future.delayed(const Duration(seconds: 2), () {
+      final marcador = Marker(
+        markerId: const MarkerId("robo_demo"),
+        position: const LatLng(-29.4131, -66.8558),
+        icon: iconoRobo,
+        infoWindow: const InfoWindow(title: "Alerta de Robo"),
+      );
+
+      setState(() {
+        _marcadores.add(marcador);
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
