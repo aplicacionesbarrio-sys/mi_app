@@ -20,7 +20,9 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
   BitmapDescriptor iconoRobo = BitmapDescriptor.defaultMarker;
   BitmapDescriptor iconoSiniestro = BitmapDescriptor.defaultMarker;
   BitmapDescriptor iconoSospechoso = BitmapDescriptor.defaultMarker;
-
+  BitmapDescriptor iconoIncendio = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor iconoPolicia = BitmapDescriptor.defaultMarker;
+  String? tipoAlertaSeleccionada;
   @override
   void initState() {
     super.initState();
@@ -43,6 +45,15 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
       const ImageConfiguration(size: Size(48, 48)),
       "assets/icons/sospechoso.png",
     );
+    iconoIncendio = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(48, 48)),
+      "assets/icons/incendio.png",
+    );
+
+    iconoPolicia = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(48, 48)),
+      "assets/icons/policia.png",
+    );
   }
 
   void agregarMarcadorDemo() {
@@ -58,6 +69,14 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
         _marcadores.add(marcador);
       });
     });
+  }
+
+  void seleccionarAlerta(String tipo) {
+    setState(() {
+      tipoAlertaSeleccionada = tipo;
+    });
+
+    print("Alerta seleccionada: $tipo");
   }
 
   @override
