@@ -79,6 +79,28 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
     print("Alerta seleccionada: $tipo");
   }
 
+  BitmapDescriptor obtenerIcono(String tipo) {
+    switch (tipo) {
+      case "robo":
+        return iconoRobo;
+
+      case "incendio":
+        return iconoIncendio;
+
+      case "sospechoso":
+        return iconoSospechoso;
+
+      case "siniestro":
+        return iconoSiniestro;
+
+      case "policia":
+        return iconoPolicia;
+
+      default:
+        return BitmapDescriptor.defaultMarker;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
