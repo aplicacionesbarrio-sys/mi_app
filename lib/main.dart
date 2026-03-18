@@ -147,13 +147,29 @@ class _InicioPageState extends State<InicioPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: tipoAlertaSeleccionada.isEmpty
-                    ? null
-                    : () {
-                        enviarAlerta();
-                      },
-                child: const Text("Enviar Alerta"),
+              Center(
+                child: SizedBox(
+                  width: 250,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade800,
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                    ),
+                    onPressed: tipoAlertaSeleccionada.isEmpty
+                        ? null
+                        : () {
+                            enviarAlerta();
+                          },
+                    child: const Text(
+                      "Enviar Alerta",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -169,7 +185,28 @@ class _InicioPageState extends State<InicioPage> {
       height: 150,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: tipoAlertaSeleccionada == tipo ? Colors.red : null,
+          elevation: 12,
+          backgroundColor: tipo == "robo"
+              ? (tipoAlertaSeleccionada == tipo
+                  ? Colors.blue
+                  : Colors.blue.shade100)
+              : tipo == "sospechoso"
+                  ? (tipoAlertaSeleccionada == tipo
+                      ? Colors.orange
+                      : Colors.orange.shade100)
+                  : tipo == "incendio"
+                      ? (tipoAlertaSeleccionada == tipo
+                          ? Colors.red
+                          : Colors.red.shade100)
+                      : tipo == "siniestro"
+                          ? (tipoAlertaSeleccionada == tipo
+                              ? Colors.yellow
+                              : Colors.yellow.shade100)
+                          : tipo == "ambulancia"
+                              ? (tipoAlertaSeleccionada == tipo
+                                  ? Colors.green
+                                  : Colors.green.shade100)
+                              : null,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
@@ -190,7 +227,11 @@ class _InicioPageState extends State<InicioPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 40)),
+            Image.asset(
+              "assets/botones/$tipo.png",
+              width: 70,
+              height: 70,
+            ),
             const SizedBox(height: 8),
             Text(
               texto,
