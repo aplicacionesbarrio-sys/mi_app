@@ -3,8 +3,6 @@ import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'mapa_alertas_screen.dart';
 import 'dart:async';
 
 void main() async {
@@ -58,9 +56,6 @@ class _InicioPageState extends State<InicioPage> {
       lat = position.latitude;
       lng = position.longitude;
     });
-
-    print("Latitud: $lat");
-    print("Longitud: $lng");
   }
 
   void enviarAlerta() {
@@ -89,15 +84,9 @@ class _InicioPageState extends State<InicioPage> {
     FirebaseFirestore.instance.collection('alertas').add({
       'numero': contadorAlertas,
       'tipo': tipoAlertaSeleccionada,
-      'barrio': 'centro',
-      'nombre': 'vecino',
-      'telefono': '000000000',
-      'mensaje':
-          '🚨 Alerta: $tipoAlertaSeleccionada\nUbicación: https://www.google.com/maps/search/?api=1&query=$lat,$lng',
       'fecha': DateTime.now(),
       'lat': lat,
       'lng': lng,
-      'mapa': 'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -107,211 +96,109 @@ class _InicioPageState extends State<InicioPage> {
     );
   }
 
-  Stream<QuerySnapshot> obtenerAlertas() {
-    return FirebaseFirestore.instance
-        .collection('alertas')
-        .orderBy('fecha', descending: true)
-        .snapshots();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
         title: const Text("Barrio Seguro"),
+        centerTitle: true,
       ),
-      body: Center(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            if (mensajeConfirmacion != "")
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  mensajeConfirmacion,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              if (mensajeConfirmacion != "")
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    mensajeConfirmacion,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
                   ),
                 ),
+              const Text(
+                "Selecciona tu alerta",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            const Text(
-              "Selecciona tu alerta",
-              style: TextStyle(
-                fontSize: 18,
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  // ROBO
+                  botonAlerta("robo", "🚨", "Robo"),
+
+                  // SOSPECHOSO
+                  botonAlerta("sospechoso", "🔍", "Sospechoso"),
+
+                  // INCENDIO
+                  botonAlerta("incendio", "🔥", "Incendio"),
+
+                  // SINIESTRO
+                  botonAlerta("siniestro", "🚗", "Siniestro"),
+
+                  // AMBULANCIA
+                  botonAlerta("ambulancia", "🚑", "Ambulancia"),
+                ],
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: tipoAlertaSeleccionada.isEmpty
+                    ? null
+                    : () {
+                        enviarAlerta();
+                      },
+                child: const Text("Enviar Alerta"),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget botonAlerta(String tipo, String emoji, String texto) {
+    return SizedBox(
+      width: 150,
+      height: 150,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: tipoAlertaSeleccionada == tipo ? Colors.red : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        onPressed: () {
+          setState(() {
+            tipoAlertaSeleccionada = tipo;
+          });
+
+          temporizadorAlerta?.cancel();
+
+          temporizadorAlerta = Timer(const Duration(seconds: 15), () {
+            setState(() {
+              tipoAlertaSeleccionada = "";
+            });
+          });
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 40)),
+            const SizedBox(height: 8),
+            Text(
+              texto,
+              style: const TextStyle(
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                SizedBox(
-                  width: 150,
-                  height: 150,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          tipoAlertaSeleccionada == "robo" ? Colors.red : null,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        tipoAlertaSeleccionada = "robo";
-                      });
-
-                      temporizadorAlerta?.cancel();
-
-                      temporizadorAlerta =
-                          Timer(const Duration(seconds: 15), () {
-                        setState(() {
-                          tipoAlertaSeleccionada = "";
-                        });
-                      });
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          "🚨",
-                          style: TextStyle(fontSize: 40),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          "Robo",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 150,
-                  height: 150,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: tipoAlertaSeleccionada == "sospechoso"
-                          ? Colors.red
-                          : null,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        tipoAlertaSeleccionada = "sospechoso";
-                      });
-
-                      temporizadorAlerta?.cancel();
-
-                      temporizadorAlerta =
-                          Timer(const Duration(seconds: 15), () {
-                        setState(() {
-                          tipoAlertaSeleccionada = "";
-                        });
-                      });
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.search, size: 40),
-                        SizedBox(height: 8),
-                        Text(
-                          "Sospechoso",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: tipoAlertaSeleccionada == "incendio"
-                        ? Colors.red
-                        : null,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      tipoAlertaSeleccionada = "incendio";
-                    });
-
-                    temporizadorAlerta?.cancel();
-
-                    temporizadorAlerta = Timer(const Duration(seconds: 15), () {
-                      setState(() {
-                        tipoAlertaSeleccionada = "";
-                      });
-                    });
-                  },
-                  child: const Text("🔥 Incendio"),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: tipoAlertaSeleccionada == "siniestro"
-                        ? Colors.red
-                        : null,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      tipoAlertaSeleccionada = "siniestro";
-                    });
-
-                    temporizadorAlerta?.cancel();
-
-                    temporizadorAlerta = Timer(const Duration(seconds: 15), () {
-                      setState(() {
-                        tipoAlertaSeleccionada = "";
-                      });
-                    });
-                  },
-                  child: const Text("🚗 Siniestro"),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: tipoAlertaSeleccionada == "ambulancia"
-                        ? Colors.red
-                        : null,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      tipoAlertaSeleccionada = "ambulancia";
-                    });
-
-                    temporizadorAlerta?.cancel();
-
-                    temporizadorAlerta = Timer(const Duration(seconds: 15), () {
-                      setState(() {
-                        tipoAlertaSeleccionada = "";
-                      });
-                    });
-                  },
-                  child: const Text("🚑 Ambulancia"),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: tipoAlertaSeleccionada.isEmpty
-                  ? null
-                  : () {
-                      enviarAlerta();
-                    },
-              child: const Text("Enviar Alerta"),
-            ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
