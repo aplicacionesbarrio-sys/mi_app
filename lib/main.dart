@@ -108,6 +108,7 @@ class _InicioPageState extends State<InicioPage> {
           child: Column(
             children: [
               const SizedBox(height: 20),
+
               if (mensajeConfirmacion != "")
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -121,39 +122,61 @@ class _InicioPageState extends State<InicioPage> {
                     ),
                   ),
                 ),
+
               const Text(
                 "Selecciona tu alerta",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
+
               const SizedBox(height: 10),
+
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  // ROBO
                   botonAlerta("robo", "🚨", "Robo"),
-
-                  // SOSPECHOSO
                   botonAlerta("sospechoso", "🔍", "Sospechoso"),
-
-                  // INCENDIO
                   botonAlerta("incendio", "🔥", "Incendio"),
-
-                  // SINIESTRO
                   botonAlerta("siniestro", "🚗", "Siniestro"),
-
-                  // AMBULANCIA
                   botonAlerta("ambulancia", "🚑", "Ambulancia"),
+                  SizedBox(
+                    width: 150,
+                    height: 150,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DenunciasPage(),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 60,
+                            color: Colors.black,
+                          ),
+                          SizedBox(height: 8),
+                          Text("Más opciones"),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
+
               const SizedBox(height: 20),
+
               Center(
                 child: SizedBox(
                   width: 250,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade800,
-                      padding: EdgeInsets.symmetric(vertical: 20),
+                      backgroundColor: Colors.red.shade900,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
                     ),
                     onPressed: tipoAlertaSeleccionada.isEmpty
                         ? null
@@ -171,7 +194,12 @@ class _InicioPageState extends State<InicioPage> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 20),
+
+              // 👇👇👇 FLECHA ACA (FUNCIONA)
+
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -238,6 +266,157 @@ class _InicioPageState extends State<InicioPage> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DenunciasPage extends StatefulWidget {
+  const DenunciasPage({super.key});
+
+  @override
+  State<DenunciasPage> createState() => _DenunciasPageState();
+}
+
+class _DenunciasPageState extends State<DenunciasPage> {
+  String urgenciaSeleccionada = "";
+  Timer? temporizador;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Selecciona tu reclamo"),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            boton(
+              tipo: "agua",
+              icono: Icons.water_drop,
+              texto: "Pérdida de agua",
+            ),
+            boton(
+              tipo: "cable",
+              emoji: "⚡",
+              texto: "Cable caído",
+            ),
+            boton(
+              tipo: "gas",
+              emoji: "🔥",
+              texto: "Pérdida de gas",
+            ),
+            const SizedBox(height: 40),
+            if (urgenciaSeleccionada != "")
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade900,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    print("Reclamo enviado: $urgenciaSeleccionada");
+                  },
+                  child: const Text(
+                    "Enviar reclamo",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🔥 BOTÓN PERFECTO (alineado SIEMPRE)
+  Widget boton({
+    required String tipo,
+    IconData? icono,
+    String? emoji,
+    required String texto,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          urgenciaSeleccionada = tipo;
+        });
+
+        temporizador?.cancel();
+
+        temporizador = Timer(const Duration(seconds: 15), () {
+          if (!mounted) return;
+          setState(() {
+            urgenciaSeleccionada = "";
+          });
+        });
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 15),
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: urgenciaSeleccionada == tipo ? Colors.blue : Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+
+          // 🔥 SOMBRA (como querías antes)
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            )
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            // ICONO ALINEADO PERFECTO
+            SizedBox(
+              width: 40,
+              child: Center(
+                child: SizedBox(
+                  width: 40, // 🔥 CLAVE para alinear todo
+                  child: Center(
+                    child: icono != null
+                        ? Icon(
+                            icono,
+                            size: 50,
+                            color: tipo == "agua"
+                                ? Colors.lightBlue
+                                : Colors.black,
+                          )
+                        : Text(
+                            emoji ?? "",
+                            style: const TextStyle(fontSize: 36),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // TEXTO BIEN CENTRADO
+            Expanded(
+              child: Text(
+                texto,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
