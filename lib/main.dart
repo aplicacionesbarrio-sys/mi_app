@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'servicios_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -290,29 +291,43 @@ class _DenunciasPageState extends State<DenunciasPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Selecciona tu reclamo"),
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
         child: Column(
           children: [
+            const Text(
+              "Selecciona tu reclamo",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
             boton(
               tipo: "agua",
               icono: Icons.water_drop,
               texto: "Pérdida de agua",
             ),
+
             boton(
               tipo: "cable",
               emoji: "⚡",
               texto: "Cable caído",
             ),
+
             boton(
               tipo: "gas",
-              emoji: "🔥",
+              icono: Icons.cloud,
               texto: "Pérdida de gas",
             ),
+
             const SizedBox(height: 40),
+
             if (urgenciaSeleccionada != "")
               SizedBox(
                 width: double.infinity,
@@ -334,13 +349,30 @@ class _DenunciasPageState extends State<DenunciasPage> {
                   ),
                 ),
               ),
+
+            // 🔥 FLECHA BIEN ABAJO DE TODO
+            const SizedBox(height: 20),
+
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ServiciosPage(),
+                  ),
+                );
+              },
+              child: const Icon(
+                Icons.arrow_forward,
+                size: 30,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // 🔥 BOTÓN PERFECTO (alineado SIEMPRE)
   Widget boton({
     required String tipo,
     IconData? icono,
@@ -369,54 +401,55 @@ class _DenunciasPageState extends State<DenunciasPage> {
         decoration: BoxDecoration(
           color: urgenciaSeleccionada == tipo ? Colors.blue : Colors.grey[200],
           borderRadius: BorderRadius.circular(12),
-
-          // 🔥 SOMBRA (como querías antes)
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            )
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
           ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            // ICONO ALINEADO PERFECTO
             SizedBox(
               width: 40,
               child: Center(
-                child: SizedBox(
-                  width: 40, // 🔥 CLAVE para alinear todo
-                  child: Center(
-                    child: icono != null
-                        ? Icon(
-                            icono,
-                            size: 50,
-                            color: tipo == "agua"
-                                ? Colors.lightBlue
-                                : Colors.black,
-                          )
-                        : Text(
-                            emoji ?? "",
-                            style: const TextStyle(fontSize: 36),
-                          ),
+                child: icono != null
+                    ? Icon(
+                        icono,
+                        size: 28,
+                        color: tipo == "agua" ? Colors.lightBlue : Colors.black,
+                      )
+                    : Text(
+                        emoji ?? "",
+                        style: const TextStyle(fontSize: 28),
+                      ),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Text(
+                  texto,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(width: 12),
-
-            // TEXTO BIEN CENTRADO
-            Expanded(
-              child: Text(
-                texto,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+            SizedBox(
+              width: 40,
+              child: Center(
+                child: icono != null
+                    ? Icon(
+                        icono,
+                        size: 28,
+                        color: tipo == "agua" ? Colors.lightBlue : Colors.black,
+                      )
+                    : Text(
+                        emoji ?? "",
+                        style: const TextStyle(fontSize: 28),
+                      ),
               ),
             ),
           ],
