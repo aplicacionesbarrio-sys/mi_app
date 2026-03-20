@@ -48,6 +48,9 @@ class _InicioPageState extends State<InicioPage> {
   String tipoAlertaSeleccionada = "";
   Timer? temporizadorAlerta;
   String mensajeConfirmacion = "";
+  bool botonHabilitado = true;
+  bool mostrarAvisoLlamada =
+      false; // Controla el botón de "atento ya recibirá..."
 
   @override
   void initState() {
@@ -65,12 +68,16 @@ class _InicioPageState extends State<InicioPage> {
   }
 
   void enviarAlerta() {
-    if (tipoAlertaSeleccionada == "") return;
+    if (tipoAlertaSeleccionada == "" || botonHabilitado == false) return;
+
     setState(() {
+      botonHabilitado = false;
       contadorAlertas++;
-      mensajeConfirmacion = "🚨 Alerta por $tipoAlertaSeleccionada enviada";
+      mensajeConfirmacion = " Alerta por $tipoAlertaSeleccionada enviada";
+      mostrarAvisoLlamada = false; // Nos aseguramos que empiece oculto
     });
 
+    // Envío a Firebase
     FirebaseFirestore.instance.collection('alertas').add({
       'numero': contadorAlertas,
       'tipo': tipoAlertaSeleccionada,
@@ -79,8 +86,33 @@ class _InicioPageState extends State<InicioPage> {
       'lng': lng,
     });
 
-    Future.delayed(const Duration(minutes: 3), () {
-      if (mounted) setState(() => mensajeConfirmacion = "");
+    // --- TIEMPO 1: Cartel de ARRIBA (10 segundos) ---
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        setState(() {
+          mensajeConfirmacion = ""; // Desaparece el de arriba
+          mostrarAvisoLlamada = true; // ¡AQUÍ APARECE EL DE ABAJO!
+        });
+      }
+    });
+
+    // --- TIEMPO 2: Cartel de ABAJO (¿Cuánto tiempo querés que se vea?) ---
+    // Cambiá el 20 por los segundos que quieras que dure el aviso de la llamada
+    Future.delayed(const Duration(seconds: 20), () {
+      if (mounted) {
+        setState(() {
+          mostrarAvisoLlamada = false; // Desaparece el de abajo solito
+        });
+      }
+    });
+
+    // --- TIEMPO 3: Bloqueo del botón enviar alerta
+    Future.delayed(const Duration(seconds: 22), () {
+      if (mounted) {
+        setState(() {
+          botonHabilitado = true; // El botón vuelve a estar rojo
+        });
+      }
     });
   }
 
@@ -96,119 +128,183 @@ class _InicioPageState extends State<InicioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Barrio Seguro"), centerTitle: true),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            if (mensajeConfirmacion != "")
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(mensajeConfirmacion,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 20,
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold)),
-              ),
-            const Text("Selecciona tu alerta",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-
-            // --- LA NUEVA GRILLA PERFECTA ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GridView.count(
-                shrinkWrap:
-                    true, // Permite que la grilla viva dentro del scroll
-                physics:
-                    const NeverScrollableScrollPhysics(), // Evita conflictos de scroll
-                crossAxisCount: 2, // 2 columnas exactas
-                mainAxisSpacing: 15, // Espacio arriba/abajo
-                crossAxisSpacing: 15, // Espacio izquierda/derecha
-                childAspectRatio:
-                    1.05, // Ajusta esto para que sean más o menos altos
-                children: [
-                  BotonAlerta(
-                    texto: "Robo",
-                    rutaImagen: "assets/botones/robo.png",
-                    colorFondo: tipoAlertaSeleccionada == "robo"
-                        ? Colors.blue
-                        : Colors.blue.shade100,
-                    accion: () => alPresionarBoton("robo"),
+      body: Stack(
+        children: [
+          // CAPA 1: Botones y títulos
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 15),
+                const Text("Selecciona tu alerta",
+                    style:
+                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 15,
+                    crossAxisSpacing: 15,
+                    childAspectRatio: 1.05,
+                    children: [
+                      BotonAlerta(
+                        texto: "Robo",
+                        rutaImagen: "assets/botones/robo.png",
+                        colorFondo: tipoAlertaSeleccionada == "robo"
+                            ? Colors.blue
+                            : Colors.blue.shade100,
+                        accion: () => alPresionarBoton("robo"),
+                      ),
+                      BotonAlerta(
+                        texto: "Sospechoso",
+                        rutaImagen: "assets/botones/sospechoso.png",
+                        colorFondo: tipoAlertaSeleccionada == "sospechoso"
+                            ? Colors.blue
+                            : Colors.blue.shade100,
+                        accion: () => alPresionarBoton("sospechoso"),
+                      ),
+                      BotonAlerta(
+                        texto: "Incendio",
+                        rutaImagen: "assets/botones/incendio.png",
+                        colorFondo: tipoAlertaSeleccionada == "incendio"
+                            ? Colors.blue
+                            : Colors.blue.shade100,
+                        accion: () => alPresionarBoton("incendio"),
+                      ),
+                      BotonAlerta(
+                        texto: "Siniestro",
+                        rutaImagen: "assets/botones/siniestro.png",
+                        colorFondo: tipoAlertaSeleccionada == "siniestro"
+                            ? Colors.blue
+                            : Colors.blue.shade100,
+                        accion: () => alPresionarBoton("siniestro"),
+                      ),
+                      BotonAlerta(
+                        texto: "Ambulancia",
+                        rutaImagen: "assets/botones/ambulancia.png",
+                        colorFondo: tipoAlertaSeleccionada == "ambulancia"
+                            ? Colors.blue
+                            : Colors.blue.shade100,
+                        accion: () => alPresionarBoton("ambulancia"),
+                      ),
+                      _botonMasOpciones(),
+                    ],
                   ),
-                  BotonAlerta(
-                    texto: "Sospechoso",
-                    rutaImagen: "assets/botones/sospechoso.png",
-                    colorFondo: tipoAlertaSeleccionada == "sospechoso"
-                        ? Colors.blue
-                        : Colors.blue.shade100,
-                    accion: () => alPresionarBoton("sospechoso"),
-                  ),
-                  BotonAlerta(
-                    texto: "Incendio",
-                    rutaImagen: "assets/botones/incendio.png",
-                    colorFondo: tipoAlertaSeleccionada == "incendio"
-                        ? Colors.blue
-                        : Colors.blue.shade100,
-                    accion: () => alPresionarBoton("incendio"),
-                  ),
-                  BotonAlerta(
-                    texto: "Siniestro",
-                    rutaImagen: "assets/botones/siniestro.png",
-                    colorFondo: tipoAlertaSeleccionada == "siniestro"
-                        ? Colors.blue
-                        : Colors.blue.shade100,
-                    accion: () => alPresionarBoton("siniestro"),
-                  ),
-                  BotonAlerta(
-                    texto: "Ambulancia",
-                    rutaImagen: "assets/botones/ambulancia.png",
-                    colorFondo: tipoAlertaSeleccionada == "ambulancia"
-                        ? Colors.blue
-                        : Colors.blue.shade100,
-                    accion: () => alPresionarBoton("ambulancia"),
-                  ),
-                  _botonMasOpciones(),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            // --- BOTÓN LARGO ALINEADO CON LA GRILLA ---
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20), // El mismo padding que la grilla
-              child: SizedBox(
-                width: double
-                    .infinity, // Esto lo estira para que sea igual de ancho que la grilla
-                height: 65, // Altura cómoda para presionar
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade900,
-                    foregroundColor: Colors.white,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          15), // Bordes iguales a los de arriba
-                    ),
-                  ),
-                  onPressed:
-                      tipoAlertaSeleccionada.isEmpty ? null : enviarAlerta,
-                  child: const Text(
-                    "ENVIAR ALERTA",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                ),
+                const SizedBox(height: 30),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 65,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade900,
+                        foregroundColor: Colors.white,
+                        elevation: 4,
+                        disabledBackgroundColor: Colors.grey.shade400,
+                        disabledForegroundColor: Colors.white70,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      onPressed:
+                          (tipoAlertaSeleccionada.isEmpty || !botonHabilitado)
+                              ? null
+                              : enviarAlerta,
+                      child: Text(
+                        botonHabilitado ? "ENVIAR ALERTA" : "ESPERE...",
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+
+          // CAPA 2: El cartel verde de ARRIBA
+          if (mensajeConfirmacion.isNotEmpty)
+            Positioned(
+              top: 10,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade400, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 4))
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle,
+                        color: Colors.green, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        mensajeConfirmacion,
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 40),
-          ],
-        ),
+
+          // CAPA 3: Aviso "Atento, ya recibirá una llamada" (ABAJO)
+          if (mostrarAvisoLlamada)
+            Positioned(
+              bottom: 30,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade600, // <--- CAMBIÁ EL COLOR ACÁ
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 8,
+                        offset: Offset(0, 4))
+                  ],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.phone_in_talk, color: Colors.white),
+                    SizedBox(width: 10),
+                    Text(
+                      "Atento, ya recibirá una llamada",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -226,4 +322,4 @@ class _InicioPageState extends State<InicioPage> {
       },
     );
   }
-}
+} // CIERRE DE LA CLASE _InicioPageState

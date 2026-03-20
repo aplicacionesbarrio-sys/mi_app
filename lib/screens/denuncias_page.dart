@@ -12,8 +12,17 @@ class DenunciasPage extends StatefulWidget {
 class _DenunciasPageState extends State<DenunciasPage> {
   String reclamoSeleccionado = "";
   Timer? _timer;
+  String mensajeConfirmacion = "";
+
+  Map<String, bool> reclamosBloqueados = {
+    "agua": false,
+    "cable": false,
+    "gas": false,
+  };
 
   void alPresionarBoton(String tipo) {
+    if (reclamosBloqueados[tipo] == true) return;
+
     setState(() {
       reclamoSeleccionado = tipo;
     });
@@ -24,6 +33,31 @@ class _DenunciasPageState extends State<DenunciasPage> {
         setState(() {
           reclamoSeleccionado = "";
         });
+      }
+    });
+  }
+
+  void enviarReclamoFinal() {
+    if (reclamoSeleccionado.isEmpty) return;
+
+    String tipoEnviado = reclamoSeleccionado;
+
+    setState(() {
+      // cartel verde de reclamo enviado
+      reclamosBloqueados[tipoEnviado] = true;
+      mensajeConfirmacion = "Reclamo de ${tipoEnviado.toUpperCase()} enviado";
+      reclamoSeleccionado = "";
+    });
+
+    Timer(const Duration(seconds: 10), () {
+      // tiempo del cartel verde
+      if (mounted) setState(() => mensajeConfirmacion = "");
+    });
+
+    Timer(const Duration(minutes: 2), () {
+      // tiempo para activar reclamo
+      if (mounted) {
+        setState(() => reclamosBloqueados[tipoEnviado] = false);
       }
     });
   }
@@ -47,85 +81,142 @@ class _DenunciasPageState extends State<DenunciasPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 30),
-            const Text("Selecciona tu reclamo",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 30),
+                const Text("Selecciona tu reclamo",
+                    style:
+                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      // --- BOTÓN AGUA ---
+                      BotonAlertaPro(
+                        // Usamos un texto más simétrico para que no pise el icono
+                        texto: reclamosBloqueados["agua"]!
+                            ? "Reportado"
+                            : "Pérdida de agua",
+                        icono: Icons.water_drop,
+                        iconoColor: reclamosBloqueados["agua"]!
+                            ? Colors.grey
+                            : Colors.blue,
+                        colorFondo: Colors.white,
+                        estaSeleccionado: reclamoSeleccionado == "agua",
+                        accion: () => alPresionarBoton("agua"),
+                      ),
+                      const SizedBox(height: 10),
 
-            // CONTENEDOR CON PADDING PARA ALINEAR TODO EL ANCHO
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  BotonAlertaPro(
-                    texto: "Pérdida de agua",
-                    icono: Icons.water_drop,
-                    iconoColor: Colors.blue,
-                    colorFondo:
-                        Colors.white, // Fondo blanco para que luzca la sombra
-                    estaSeleccionado: reclamoSeleccionado == "agua",
-                    accion: () => alPresionarBoton("agua"),
-                  ),
-                  const SizedBox(height: 1), // Espacio entre botones
-                  BotonAlertaPro(
-                    texto: "Cable caído",
-                    icono: Icons.electrical_services,
-                    iconoColor: Colors.orange,
-                    colorFondo: Colors.white,
-                    estaSeleccionado: reclamoSeleccionado == "cable",
-                    accion: () => alPresionarBoton("cable"),
-                  ),
-                  const SizedBox(height: 1), // Espacio entre botones
-                  BotonAlertaPro(
-                    texto: "Pérdida de gas",
-                    icono: Icons.cloud,
-                    iconoColor: Color.fromARGB(255, 150, 37, 2),
-                    colorFondo: Colors.white,
-                    estaSeleccionado: reclamoSeleccionado == "gas",
-                    accion: () => alPresionarBoton("gas"),
-                  ),
+                      // --- BOTÓN CABLE ---
+                      BotonAlertaPro(
+                        texto: reclamosBloqueados["cable"]!
+                            ? "Reportado"
+                            : "Cable caído",
+                        icono: Icons.electrical_services,
+                        iconoColor: reclamosBloqueados["cable"]!
+                            ? Colors.grey
+                            : Colors.orange,
+                        colorFondo: Colors.white,
+                        estaSeleccionado: reclamoSeleccionado == "cable",
+                        accion: () => alPresionarBoton("cable"),
+                      ),
+                      const SizedBox(height: 10),
 
-                  const SizedBox(height: 40),
+                      // --- BOTÓN GAS ---
+                      BotonAlertaPro(
+                        texto: reclamosBloqueados["gas"]!
+                            ? "Reportado"
+                            : "Pérdida de gas",
+                        icono: Icons.cloud,
+                        iconoColor: reclamosBloqueados["gas"]!
+                            ? Colors.grey
+                            : Color.fromARGB(255, 228, 63, 12),
+                        colorFondo: Colors.white,
+                        estaSeleccionado: reclamoSeleccionado == "gas",
+                        accion: () => alPresionarBoton("gas"),
+                      ),
 
-                  // --- BOTÓN ENVIAR RECLAMO (ESTILO PRO E IGUAL ANCHO) ---
-                  SizedBox(
-                    width: double.infinity, // ANCHO TOTAL IGUAL A LOS DE ARRIBA
-                    height: 70,
-                    child: Material(
-                      color: reclamoSeleccionado.isEmpty
-                          ? Colors.grey.shade400
-                          : const Color(0xFFEF4444), // Rojo
-                      borderRadius: BorderRadius.circular(15),
-                      elevation: reclamoSeleccionado.isEmpty
-                          ? 0
-                          : 5, // Sombra si está activo
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(15),
-                        onTap: reclamoSeleccionado.isEmpty
-                            ? null
-                            : () => print("Enviado: $reclamoSeleccionado"),
-                        child: const Center(
-                          child: Text(
-                            "Enviar Reclamo",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: 40),
+
+                      // BOTÓN ENVIAR
+                      SizedBox(
+                        width: double.infinity,
+                        height: 70,
+                        child: Material(
+                          color: reclamoSeleccionado.isEmpty
+                              ? Colors.grey.shade400
+                              : const Color(0xFFEF4444),
+                          borderRadius: BorderRadius.circular(15),
+                          elevation: reclamoSeleccionado.isEmpty ? 0 : 5,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(15),
+                            onTap: reclamoSeleccionado.isEmpty
+                                ? null
+                                : enviarReclamoFinal,
+                            child: const Center(
+                              child: Text(
+                                "Enviar Reclamo",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+
+          // CARTEL VERDE FLOTANTE (ARRIBA)
+          if (mensajeConfirmacion.isNotEmpty)
+            Positioned(
+              top: 10,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade400, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 4))
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle,
+                        color: Colors.green, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        mensajeConfirmacion,
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 40),
-          ],
-        ),
+        ],
       ),
     );
   }
