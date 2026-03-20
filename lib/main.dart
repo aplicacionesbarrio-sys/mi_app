@@ -6,8 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
 // CONEXIONES ORGANIZADAS
-import 'package:mi_app/screens/denuncias_page.dart';
-import 'package:mi_app/screens/servicios_page.dart';
+import 'screens/denuncias_page.dart';
+import 'screens/servicios_page.dart';
 import 'widgets_personalizados.dart';
 
 void main() async {
