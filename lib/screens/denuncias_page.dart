@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // LA LIBRETA: Esta herramienta permite que la app anote cosas en el disco del celular
 import '../widgets_personalizados.dart';
+import 'servicios_page.dart';
 
 class DenunciasPage extends StatefulWidget {
   const DenunciasPage({super.key});
@@ -14,66 +16,98 @@ class _DenunciasPageState extends State<DenunciasPage> {
   Timer? _timer;
   String mensajeConfirmacion = "";
 
+  // Mapa de bloqueo: Es la lista que dice quién está gris (true) o azul (false)
   Map<String, bool> reclamosBloqueados = {
     "agua": false,
     "cable": false,
-    "gas": false,
+    "gas": false
   };
 
-  void alPresionarBoton(String tipo) {
-    if (reclamosBloqueados[tipo] == true) return;
+  @override
+  void initState() {
+    super.initState();
+    // FUNCIÓN: Se ejecuta apenas entrás a la pantalla para "leer la libreta"
+    _cargarEstadoBloqueos();
+  }
+
+  // --- FUNCIÓN: BUSCAR DATOS GUARDADOS ---
+  // Sirve para que la app revise si el vecino ya hizo un reporte hace menos de 24h
+  Future<void> _cargarEstadoBloqueos() async {
+    final prefs = await SharedPreferences.getInstance();
+    DateTime ahora = DateTime.now();
 
     setState(() {
-      reclamoSeleccionado = tipo;
-    });
-
-    _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 15), () {
-      if (mounted) {
-        setState(() {
-          reclamoSeleccionado = "";
-        });
+      for (String tipo in ["agua", "cable", "gas"]) {
+        String? fechaGuardadaStr = prefs.getString("fecha_$tipo");
+        if (fechaGuardadaStr != null) {
+          DateTime fechaGuardada = DateTime.parse(fechaGuardadaStr);
+          // Si la diferencia de tiempo es menor a 24 horas, lo dejamos bloqueado
+          if (ahora.difference(fechaGuardada).inHours < 24) {
+            reclamosBloqueados[tipo] = true;
+          } else {
+            // Si ya pasó el tiempo, borramos la nota de la libreta para que se libere
+            reclamosBloqueados[tipo] = false;
+            prefs.remove("fecha_$tipo");
+          }
+        }
       }
     });
   }
 
-  void enviarReclamoFinal() {
-    if (reclamoSeleccionado.isEmpty) return;
+  // --- FUNCIÓN: ANOTAR EN LA LIBRETA ---
+  // Sirve para guardar la fecha y hora exacta en la que se apretó "Enviar"
+  Future<void> _guardarBloqueo(String tipo) async {
+    final prefs = await SharedPreferences.getInstance();
+    // Guardamos la hora actual como un texto (String) para que no se borre al cerrar la app
+    await prefs.setString("fecha_$tipo", DateTime.now().toIso8601String());
+  }
 
+  // --- FUNCIÓN: CUANDO TOCÁS UN BOTÓN ---
+  // Controla la selección y el reloj de 15 segundos antes de que se desmarque
+  void alPresionarBoton(String tipo) {
+    if (reclamosBloqueados[tipo] == true) return;
+    setState(() => reclamoSeleccionado = tipo);
+
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 15), () {
+      if (mounted) setState(() => reclamoSeleccionado = "");
+    });
+  }
+
+  // --- FUNCIÓN: EL ENVÍO FINAL ---
+  // Aquí es donde sucede la magia: bloquea el botón, muestra el cartel y GUARDA en la memoria
+  void enviarReclamoFinal() async {
+    if (reclamoSeleccionado.isEmpty) return;
     String tipoEnviado = reclamoSeleccionado;
 
     setState(() {
-      // cartel verde de reclamo enviado
       reclamosBloqueados[tipoEnviado] = true;
       mensajeConfirmacion = "Reclamo de ${tipoEnviado.toUpperCase()} enviado";
       reclamoSeleccionado = "";
     });
 
-    Timer(const Duration(seconds: 10), () {
-      // tiempo del cartel verde
-      if (mounted) setState(() => mensajeConfirmacion = "");
-    });
+    // LLAMAMOS A LA FUNCIÓN DE GUARDADO PERMANENTE
+    await _guardarBloqueo(tipoEnviado);
 
-    Timer(const Duration(minutes: 2), () {
-      // tiempo para activar reclamo
-      if (mounted) {
-        setState(() => reclamosBloqueados[tipoEnviado] = false);
-      }
+    Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => mensajeConfirmacion = "");
     });
   }
 
   @override
   void dispose() {
+    // FUNCIÓN: Apaga el reloj cuando te vas de la pantalla para que no gaste batería
     _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // color de arriba de la pantalla secundaria
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        title: const Text("Barrio Seguro",
+        title: const Text("Barrio Seguro", // zona de flecha
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         leading: IconButton(
@@ -86,7 +120,7 @@ class _DenunciasPageState extends State<DenunciasPage> {
           SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 30),
+                const SizedBox(height: 30), // titulo
                 const Text("Selecciona tu reclamo",
                     style:
                         TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
@@ -95,9 +129,8 @@ class _DenunciasPageState extends State<DenunciasPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
-                      // --- BOTÓN AGUA ---
                       BotonAlertaPro(
-                        // Usamos un texto más simétrico para que no pise el icono
+                        // boton de perdida de agua
                         texto: reclamosBloqueados["agua"]!
                             ? "Reportado"
                             : "Pérdida de agua",
@@ -110,9 +143,8 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         accion: () => alPresionarBoton("agua"),
                       ),
                       const SizedBox(height: 10),
-
-                      // --- BOTÓN CABLE ---
                       BotonAlertaPro(
+                        // boton cable caido
                         texto: reclamosBloqueados["cable"]!
                             ? "Reportado"
                             : "Cable caído",
@@ -125,24 +157,20 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         accion: () => alPresionarBoton("cable"),
                       ),
                       const SizedBox(height: 10),
-
-                      // --- BOTÓN GAS ---
                       BotonAlertaPro(
+                        // boton perdida de gas
                         texto: reclamosBloqueados["gas"]!
                             ? "Reportado"
                             : "Pérdida de gas",
                         icono: Icons.cloud,
                         iconoColor: reclamosBloqueados["gas"]!
                             ? Colors.grey
-                            : Color.fromARGB(255, 228, 63, 12),
+                            : const Color.fromARGB(255, 150, 37, 2),
                         colorFondo: Colors.white,
                         estaSeleccionado: reclamoSeleccionado == "gas",
                         accion: () => alPresionarBoton("gas"),
-                      ),
-
+                      ), // boton para enviar reclamo
                       const SizedBox(height: 40),
-
-                      // BOTÓN ENVIAR
                       SizedBox(
                         width: double.infinity,
                         height: 70,
@@ -158,18 +186,42 @@ class _DenunciasPageState extends State<DenunciasPage> {
                                 ? null
                                 : enviarReclamoFinal,
                             child: const Center(
-                              child: Text(
-                                "Enviar Reclamo",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              // boton enviar reclamo
+                              child: Text("Enviar Reclamo",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ),
                       ),
+                      // --- TEXTO Y FLECHA PARA IR A SERVICIOS ---
+                      const SizedBox(height: 20),
+                      const Center(
+                        child: Text(
+                          "Ver Servicios",
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
+                      ),
+                      Center(
+                        child: IconButton(   
+                          icon: const Icon(Icons.arrow_forward_ios,
+                              color: Colors.grey, size: 25),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const ServiciosPage()),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(
+                          height: 40), // Espacio final para que se vea bien
                     ],
                   ),
                 ),
@@ -177,8 +229,6 @@ class _DenunciasPageState extends State<DenunciasPage> {
               ],
             ),
           ),
-
-          // CARTEL VERDE FLOTANTE (ARRIBA)
           if (mensajeConfirmacion.isNotEmpty)
             Positioned(
               top: 10,
@@ -203,15 +253,11 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         color: Colors.green, size: 28),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        mensajeConfirmacion,
-                        style: const TextStyle(
-                          color: Colors.green,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                        child: Text(mensajeConfirmacion,
+                            style: const TextStyle(
+                                color: Colors.green,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold))),
                   ],
                 ),
               ),
