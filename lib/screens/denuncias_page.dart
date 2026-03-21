@@ -42,7 +42,7 @@ class _DenunciasPageState extends State<DenunciasPage> {
         if (fechaGuardadaStr != null) {
           DateTime fechaGuardada = DateTime.parse(fechaGuardadaStr);
           // Si la diferencia de tiempo es menor a 24 horas, lo dejamos bloqueado
-          if (ahora.difference(fechaGuardada).inHours < 24) {
+          if (ahora.difference(fechaGuardada).inHours < 1) {
             reclamosBloqueados[tipo] = true;
           } else {
             // Si ya pasó el tiempo, borramos la nota de la libreta para que se libere
@@ -129,8 +129,8 @@ class _DenunciasPageState extends State<DenunciasPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
+                      // 1. Botón de Pérdida de Agua
                       BotonAlertaPro(
-                        // boton de perdida de agua
                         texto: reclamosBloqueados["agua"]!
                             ? "Reportado"
                             : "Pérdida de agua",
@@ -138,13 +138,15 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         iconoColor: reclamosBloqueados["agua"]!
                             ? Colors.grey
                             : Colors.blue,
-                        colorFondo: Colors.white,
+                        colorFondo: reclamoSeleccionado == "agua"
+                            ? Colors.blue
+                            : Colors.blue.shade100, // <--- CAMBIO AQUÍ
                         estaSeleccionado: reclamoSeleccionado == "agua",
                         accion: () => alPresionarBoton("agua"),
                       ),
                       const SizedBox(height: 10),
+                      // 2. Botón de Cable Caído
                       BotonAlertaPro(
-                        // boton cable caido
                         texto: reclamosBloqueados["cable"]!
                             ? "Reportado"
                             : "Cable caído",
@@ -152,13 +154,15 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         iconoColor: reclamosBloqueados["cable"]!
                             ? Colors.grey
                             : Colors.orange,
-                        colorFondo: Colors.white,
+                        colorFondo: reclamoSeleccionado == "cable"
+                            ? Colors.blue
+                            : Colors.blue.shade100, // <--- CAMBIO AQUÍ
                         estaSeleccionado: reclamoSeleccionado == "cable",
                         accion: () => alPresionarBoton("cable"),
                       ),
                       const SizedBox(height: 10),
+                      // 3. Botón de Pérdida de Gas
                       BotonAlertaPro(
-                        // boton perdida de gas
                         texto: reclamosBloqueados["gas"]!
                             ? "Reportado"
                             : "Pérdida de gas",
@@ -166,7 +170,9 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         iconoColor: reclamosBloqueados["gas"]!
                             ? Colors.grey
                             : const Color.fromARGB(255, 150, 37, 2),
-                        colorFondo: Colors.white,
+                        colorFondo: reclamoSeleccionado == "gas"
+                            ? Colors.blue
+                            : Colors.blue.shade100, // <--- CAMBIO AQUÍ
                         estaSeleccionado: reclamoSeleccionado == "gas",
                         accion: () => alPresionarBoton("gas"),
                       ), // boton para enviar reclamo

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({super.key});
@@ -52,7 +53,43 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "icono": Icons.precision_manufacturing,
       "color": const Color.fromARGB(255, 89, 5, 128)
     },
+    {
+      "nombre": "Pintor",
+      "icono": Icons.format_paint,
+      "color": Colors.pinkAccent
+    },
+    {"nombre": "Otros", "icono": Icons.more_horiz, "color": Colors.blueGrey},
   ];
+
+  // --- NUEVO: LECTOR DE LA LIBRETA AL INICIAR ---
+  @override
+  void initState() {
+    super.initState();
+    _cargarEstadoBloqueos(); // Lee la memoria apenas abre la pantalla
+  }
+
+  Future<void> _cargarEstadoBloqueos() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    DateTime ahora = DateTime.now();
+
+    setState(() {
+      for (var oficio in misOficios) {
+        String nombre = oficio['nombre'];
+        String? fechaStr = prefs.getString("fecha_servicio_$nombre");
+
+        if (fechaStr != null) {
+          DateTime fechaGuardada = DateTime.parse(fechaStr);
+          // esto es para q la memoria guarde y al reiniciar el cel no se olvide
+          if (ahora.difference(fechaGuardada).inHours < 24) {
+            serviciosBloqueados[nombre] = true;
+          } else {
+            serviciosBloqueados[nombre] = false;
+            prefs.remove("fecha_servicio_$nombre");
+          }
+        }
+      }
+    });
+  }
 
   void enviarPedido() async {
     if (servicioSeleccionado.isEmpty || enviando) return;
@@ -72,12 +109,12 @@ class _ServiciosPageState extends State<ServiciosPage> {
     });
 
     // El cartel de arriba desaparece a los 5 segundos
-    Timer(const Duration(seconds: 5), () {
+    Timer(const Duration(seconds: 10), () {
       if (mounted) setState(() => cartelConfirmacion = "");
     });
 
-    // Desbloqueo en 24 horas
-    Timer(const Duration(hours: 24), () {
+    // Desbloqueo en  horas de boton servicio enviado
+    Timer(const Duration(hours: 1), () {
       if (mounted) {
         setState(() {
           serviciosBloqueados[servicioSeleccionado] = false;
@@ -85,7 +122,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
       }
     });
 
-    // --- SE ELIMINÓ EL SNACKBAR DE AQUÍ PARA QUE NO SALGA EL CARTEL DE ABAJO ---
+    // Esto anota la hora del pedido en la memoria del celular
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString("fecha_servicio_$servicioSeleccionado",
+        DateTime.now().toIso8601String());
 
     setState(() {
       enviando = false;
@@ -94,7 +134,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   void _iniciarTemporizador() {
-    timerDesmarcar?.cancel();
+    timerDesmarcar
+        ?.cancel(); // duracion de espera de boton enviar en pantalla 3
     timerDesmarcar = Timer(const Duration(seconds: 15), () {
       if (mounted) {
         setState(() {
@@ -123,7 +164,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 30),
+              const SizedBox(height: 15), // espacio arriba
               const Text(
                 "Seleccioná tu servicio",
                 style: TextStyle(
@@ -132,7 +173,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   color: Colors.black87,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 15), // espacio abajo
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
