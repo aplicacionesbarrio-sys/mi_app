@@ -123,7 +123,7 @@ class _DenunciasPageState extends State<DenunciasPage> {
                 const SizedBox(height: 30), // titulo
                 const Text("Selecciona tu reclamo",
                     style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -208,7 +208,7 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         ),
                       ),
                       Center(
-                        child: IconButton(   
+                        child: IconButton(
                           icon: const Icon(Icons.arrow_forward_ios,
                               color: Colors.grey, size: 25),
                           onPressed: () {

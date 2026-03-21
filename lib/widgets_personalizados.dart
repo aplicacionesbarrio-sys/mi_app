@@ -35,7 +35,9 @@ class BotonAlerta extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: rutaImagen != null
-                      ? Image.asset(rutaImagen!, fit: BoxFit.contain)
+                      ? Image.asset(rutaImagen!, // tamaño de iconos pantalla 1
+                          height: 60,
+                          fit: BoxFit.contain)
                       : Icon(icono, size: 50, color: Colors.black),
                 ),
               ),

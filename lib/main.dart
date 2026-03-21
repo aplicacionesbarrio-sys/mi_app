@@ -127,7 +127,15 @@ class _InicioPageState extends State<InicioPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Barrio Seguro"), centerTitle: true),
+      appBar: AppBar(
+        title: const Text(
+          "Barrio Seguro",
+          style: TextStyle(
+            fontWeight: FontWeight.bold, // <--- Esto es lo que buscamos
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: Stack(
         children: [
           // CAPA 1: Botones y títulos
@@ -137,7 +145,7 @@ class _InicioPageState extends State<InicioPage> {
                 const SizedBox(height: 15),
                 const Text("Selecciona tu alerta",
                     style:
-                        TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),

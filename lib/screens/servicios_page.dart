@@ -14,15 +14,22 @@ class _ServiciosPageState extends State<ServiciosPage> {
   String servicioSeleccionado = "";
   bool enviando = false;
   String cartelConfirmacion = "";
-
+  Timer? timerDesmarcar;
   // --- SECCIÓN: LÓGICA DE BLOQUEO (24 Horas) ---
-  // Aquí se guardan los servicios que ya fueron pedidos para deshabilitarlos
   Map<String, bool> serviciosBloqueados = {};
 
   // --- SECCIÓN: LISTADO DE OFICIOS ---
   final List<Map<String, dynamic>> misOficios = [
-    {"nombre": "Albañil", "icono": Icons.foundation, "color": Colors.brown},
-    {"nombre": "Gomeria", "icono": Icons.tire_repair, "color": Colors.blueGrey},
+    {
+      "nombre": "Albañil",
+      "icono": Icons.foundation,
+      "color": const Color.fromARGB(255, 151, 120, 109)
+    },
+    {
+      "nombre": "Gomeria",
+      "icono": Icons.tire_repair,
+      "color": const Color.fromARGB(255, 215, 91, 219)
+    },
     {"nombre": "Jardinero", "icono": Icons.yard, "color": Colors.green},
     {"nombre": "Plomero", "icono": Icons.plumbing, "color": Colors.blue},
     {
@@ -35,15 +42,18 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "icono": Icons.propane_tank,
       "color": Colors.redAccent
     },
-    {"nombre": "Cerrajero", "icono": Icons.vpn_key, "color": Colors.amber},
+    {
+      "nombre": "Cerrajero",
+      "icono": Icons.vpn_key,
+      "color": const Color.fromARGB(255, 225, 199, 25)
+    },
     {
       "nombre": "Herrero",
       "icono": Icons.precision_manufacturing,
-      "color": Colors.grey
+      "color": const Color.fromARGB(255, 89, 5, 128)
     },
   ];
 
-  // --- SECCIÓN: FUNCIÓN ENVIAR A FIREBASE ---
   void enviarPedido() async {
     if (servicioSeleccionado.isEmpty || enviando) return;
 
@@ -52,24 +62,21 @@ class _ServiciosPageState extends State<ServiciosPage> {
       cartelConfirmacion = "Solicitud de $servicioSeleccionado enviada";
     });
 
-    // Simulación de envío a Firebase (Aquí cargarás los datos del vecino luego)
     await FirebaseFirestore.instance.collection('pedidos_servicios').add({
       'servicio': servicioSeleccionado,
       'fecha': DateTime.now(),
-      // Aquí irán Nombre, Celular, GPS del vecino registrado
     });
 
-    // Bloqueamos el servicio seleccionado
     setState(() {
       serviciosBloqueados[servicioSeleccionado] = true;
     });
 
-    // --- TIEMPO DEL CARTEL VERDE (5 segundos) ---
+    // El cartel de arriba desaparece a los 5 segundos
     Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => cartelConfirmacion = "");
     });
 
-    // --- TIEMPO DE RE-ACTIVACIÓN (Aquí cambias las 24h) ---
+    // Desbloqueo en 24 horas
     Timer(const Duration(hours: 24), () {
       if (mounted) {
         setState(() {
@@ -78,9 +85,22 @@ class _ServiciosPageState extends State<ServiciosPage> {
       }
     });
 
+    // --- SE ELIMINÓ EL SNACKBAR DE AQUÍ PARA QUE NO SALGA EL CARTEL DE ABAJO ---
+
     setState(() {
       enviando = false;
-      servicioSeleccionado = ""; // Limpiamos selección para el próximo
+      servicioSeleccionado = "";
+    });
+  }
+
+  void _iniciarTemporizador() {
+    timerDesmarcar?.cancel();
+    timerDesmarcar = Timer(const Duration(seconds: 15), () {
+      if (mounted) {
+        setState(() {
+          servicioSeleccionado = "";
+        });
+      }
     });
   }
 
@@ -94,10 +114,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
           "Barrio Seguro",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        // --- ESTA ES LA FLECHA de volver en la pantalla 3 ---
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back,
-              color: Colors.white, size: 28), // Le puse 38 para que se note
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -105,36 +123,27 @@ class _ServiciosPageState extends State<ServiciosPage> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 20),
-              Column(
-          children: [
-            const SizedBox(height: 20),
-            
-            // --- AQUÍ APARECE EL TÍTULO NUEVO ---
-            const Text(
-              "Seleccioná tu servicio",
-              style: TextStyle(
-                fontSize: 22, 
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+              const SizedBox(height: 30),
+              const Text(
+                "Seleccioná tu servicio",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-
-            
-            
-              // --- SECCIÓN: GRILLA DE 2 COLUMNAS ---
+              const SizedBox(height: 30),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: GridView.builder(
                     itemCount: misOficios.length,
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, // 2 Columnas
+                      crossAxisCount: 2,
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
-                      childAspectRatio: 1.8, // Controla el ALTO de los botones
+                      childAspectRatio: 1.8,
                     ),
                     itemBuilder: (context, index) {
                       String nombre = misOficios[index]['nombre'];
@@ -145,13 +154,15 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         onTap: estaBloqueado
                             ? null
                             : () {
-                                setState(() => servicioSeleccionado = nombre);
+                                setState(() {
+                                  servicioSeleccionado = nombre;
+                                });
+                                _iniciarTemporizador();
                               },
                         child: Container(
                           decoration: BoxDecoration(
-                            // Si está bloqueado es gris, si no, usa el color que elegiste
                             color: estaBloqueado
-                                ? Colors.grey.shade300
+                                ? Colors.grey.shade400
                                 : (estaSeleccionado
                                     ? misOficios[index]['color']
                                     : Colors.blue.shade50),
@@ -189,50 +200,73 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   ),
                 ),
               ),
-
-              // --- SECCIÓN: BOTÓN ENVIAR ABAJO ---
               Padding(
-                padding: const EdgeInsets.all(30),
+                padding: const EdgeInsets.all(20),
                 child: SizedBox(
-                  width: 200,
-                  height: 50,
+                  width: double.infinity,
+                  height: 60,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.shade700,
+                      backgroundColor: Colors.red.shade700,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          Colors.grey.shade400.withOpacity(1.0),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                     ),
                     onPressed: servicioSeleccionado.isEmpty || enviando
                         ? null
                         : enviarPedido,
-                    child: Text(enviando ? "ENVIANDO..." : "ENVIAR PEDIDO"),
+                    child: Text(
+                      enviando ? "ENVIANDO..." : "ENVIAR PEDIDO",
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
 
-          // --- SECCIÓN: CARTEL VERDE DE ARRIBA ---
+          // --- CARTEL FLOTANTE (Solo el de arriba) ---
           if (cartelConfirmacion.isNotEmpty)
             Positioned(
-              top: 20,
+              top: 15,
               left: 20,
               right: 20,
               child: Container(
-                padding: const EdgeInsets.all(15),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade600,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 5)
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.shade400, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
-                child: Text(
-                  cartelConfirmacion,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle,
+                        color: Colors.green, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        cartelConfirmacion,
+                        style: const TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
