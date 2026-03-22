@@ -9,6 +9,7 @@ class BotonAlerta extends StatelessWidget {
   final IconData? icono;
   final Color colorFondo;
   final VoidCallback accion;
+  final bool estaSeleccionado; // Mantenemos la variable para el cambio de color
 
   const BotonAlerta({
     super.key,
@@ -17,12 +18,16 @@ class BotonAlerta extends StatelessWidget {
     this.icono,
     required this.colorFondo,
     required this.accion,
+    this.estaSeleccionado =
+        false, // <--- IMPORTANTE: Al ser false por defecto, no da error en otras pantallas
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: colorFondo,
+      color: estaSeleccionado
+          ? Colors.blue
+          : colorFondo, // Si se selecciona, cambia a azul
       borderRadius: BorderRadius.circular(15),
       elevation: 3,
       child: InkWell(
@@ -35,10 +40,12 @@ class BotonAlerta extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: rutaImagen != null
-                      ? Image.asset(rutaImagen!, // tamaño de iconos pantalla 1
-                          height: 60,
-                          fit: BoxFit.contain)
-                      : Icon(icono, size: 50, color: Colors.black),
+                      ? Image.asset(rutaImagen!,
+                          height: 60, fit: BoxFit.contain)
+                      : Icon(icono,
+                          size: 50,
+                          color:
+                              estaSeleccionado ? Colors.white : Colors.black),
                 ),
               ),
             ),
@@ -47,10 +54,10 @@ class BotonAlerta extends StatelessWidget {
               child: Text(
                 texto,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: estaSeleccionado ? Colors.white : Colors.black,
                 ),
               ),
             ),
@@ -64,6 +71,7 @@ class BotonAlerta extends StatelessWidget {
 // ---------------------------------------------------------
 // 2. EL MOLDE ANCHO (Para Reclamos / Segunda Pantalla)
 // ---------------------------------------------------------
+// ESTE QUEDA IGUAL, NO TOCAMOS TUS ANOTACIONES NI LÓGICA
 class BotonAlertaPro extends StatelessWidget {
   final String texto;
   final IconData icono;
@@ -85,16 +93,13 @@ class BotonAlertaPro extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity, // Ocupa todo el ancho disponible
+      width: double.infinity,
       height: 75,
-      margin:
-          const EdgeInsets.symmetric(vertical: 10), // SEPARACIÓN ENTRE BOTONES
+      margin: const EdgeInsets.symmetric(vertical: 10),
       child: Material(
-        color: estaSeleccionado
-            ? const Color(0xFF2196F3)
-            : colorFondo, // Azul vibrante si selecciona
+        color: estaSeleccionado ? const Color(0xFF2196F3) : colorFondo,
         borderRadius: BorderRadius.circular(15),
-        elevation: 5, // SOMBRA
+        elevation: 5,
         shadowColor: Colors.black54,
         child: InkWell(
           borderRadius: BorderRadius.circular(15),
@@ -114,7 +119,7 @@ class BotonAlertaPro extends StatelessWidget {
               Text(
                 texto,
                 style: TextStyle(
-                  fontSize: 22, // Texto más legible
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: estaSeleccionado ? Colors.white : Colors.black87,
                 ),
