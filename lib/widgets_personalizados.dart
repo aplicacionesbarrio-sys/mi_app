@@ -108,18 +108,19 @@ class BotonAlertaPro extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 25),
-                  child: Icon(icono,
+                    padding: const EdgeInsets.only(left: 25),
+                    child: Icon(
+                      icono,
                       size: 35,
-                      color: estaSeleccionado ? Colors.white : iconoColor),
-                ),
+                      color: iconoColor,
+                    )),
               ),
               Text(
                 texto,
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: estaSeleccionado ? Colors.white : Colors.black87,
+                  color: Colors.black87,
                 ),
               ),
             ],

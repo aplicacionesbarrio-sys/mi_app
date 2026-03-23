@@ -139,8 +139,13 @@ class _DenunciasPageState extends State<DenunciasPage> {
                             : "Pérdida de agua",
                         icono: Icons.water_drop,
                         iconoColor: reclamosBloqueados["agua"]!
-                            ? Colors.grey
-                            : Colors.blue,
+                            ? const Color.fromARGB(
+                                // precionado
+                                255,
+                                104,
+                                157,
+                                185) // cambia color de icono sin precion
+                            : const Color.fromARGB(255, 140, 190, 231),
                         colorFondo: reclamoSeleccionado == "agua"
                             ? Colors.blue
                             : const Color.fromARGB(
