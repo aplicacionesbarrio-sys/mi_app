@@ -25,9 +25,7 @@ class BotonAlerta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: estaSeleccionado
-          ? Colors.blue
-          : colorFondo, // Si se selecciona, cambia a azul
+      color: colorFondo, // Ahora usará el color que mandamos desde main.dart
       borderRadius: BorderRadius.circular(15),
       elevation: 3,
       child: InkWell(

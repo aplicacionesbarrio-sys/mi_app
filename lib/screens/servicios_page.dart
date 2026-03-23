@@ -16,70 +16,107 @@ class _ServiciosPageState extends State<ServiciosPage> {
   bool enviando = false;
   String cartelConfirmacion = "";
   Timer? timerDesmarcar;
-  // --- SECCIÓN: LÓGICA DE BLOQUEO (24 Horas) ---
   Map<String, bool> serviciosBloqueados = {};
 
-  // --- SECCIÓN: LISTADO DE OFICIOS ---
+  // --- SECCIÓN: LISTADO DE OFICIOS (Tu Tablero de Control) ---
   final List<Map<String, dynamic>> misOficios = [
     {
       "nombre": "Albañil",
       "icono": Icons.foundation,
-      "color": const Color.fromARGB(255, 151, 120, 109)
+      "colorBase": const Color.fromARGB(255, 250, 251, 250),
+      "colorPresionado": const Color(0xFF97786D),
+      "colorIcono": const Color.fromARGB(255, 62, 26, 145),
+      "colorLetra": Colors.black87,
     },
     {
       "nombre": "Gomeria",
       "icono": Icons.tire_repair,
-      "color": const Color.fromARGB(255, 215, 91, 219)
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": const Color(0xFFD75BDB),
+      "colorIcono": Colors.yellow,
+      "colorLetra": Colors.black87,
     },
-    {"nombre": "Jardinero", "icono": Icons.yard, "color": Colors.green},
-    {"nombre": "Plomero", "icono": Icons.plumbing, "color": Colors.blue},
+    {
+      "nombre": "Jardinero",
+      "icono": Icons.yard,
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": Colors.green,
+      "colorIcono": const Color.fromARGB(255, 163, 104, 104),
+      "colorLetra": Colors.black87,
+    },
+    {
+      "nombre": "Plomero",
+      "icono": Icons.plumbing,
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": const Color.fromARGB(255, 75, 115, 176),
+      "colorIcono": const Color.fromARGB(255, 153, 194, 73),
+      "colorLetra": Colors.black87,
+    },
     {
       "nombre": "Electricista",
       "icono": Icons.electrical_services,
-      "color": Colors.orange
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": const Color.fromARGB(255, 214, 125, 77),
+      "colorIcono": Color.fromARGB(255, 38, 122, 137),
+      "colorLetra": Colors.black87,
     },
     {
       "nombre": "Gasista",
       "icono": Icons.propane_tank,
-      "color": Colors.redAccent
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": Colors.red.shade900,
+      "colorIcono": const Color.fromARGB(255, 21, 156, 25),
+      "colorLetra": Colors.black87,
     },
     {
       "nombre": "Cerrajero",
       "icono": Icons.vpn_key,
-      "color": const Color.fromARGB(255, 225, 199, 25)
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": const Color(0xFFA59210),
+      "colorIcono": Colors.black87,
+      "colorLetra": Colors.black87,
     },
     {
       "nombre": "Herrero",
       "icono": Icons.precision_manufacturing,
-      "color": const Color.fromARGB(255, 89, 5, 128)
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": const Color.fromARGB(255, 154, 96, 180),
+      "colorIcono": const Color.fromARGB(255, 109, 15, 15),
+      "colorLetra": Colors.black87,
     },
     {
       "nombre": "Pintor",
       "icono": Icons.format_paint,
-      "color": Colors.pinkAccent
+      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorPresionado": const Color.fromARGB(255, 151, 83, 120),
+      "colorIcono": const Color.fromARGB(255, 31, 145, 19),
+      "colorLetra": Colors.black87,
     },
-    {"nombre": "Otros", "icono": Icons.more_horiz, "color": Colors.blueGrey},
+    {
+      "nombre": "Otros",
+      "icono": Icons.more_horiz,
+      "colorBase": const Color.fromARGB(255, 252, 252, 252),
+      "colorPresionado": const Color.fromARGB(221, 67, 44, 159),
+      "colorIcono": const Color.fromARGB(255, 35, 29, 29),
+      "colorLetra": const Color.fromARGB(221, 16, 12, 12),
+    },
   ];
 
-  // --- NUEVO: LECTOR DE LA LIBRETA AL INICIAR ---
   @override
   void initState() {
     super.initState();
-    _cargarEstadoBloqueos(); // Lee la memoria apenas abre la pantalla
+    _cargarEstadoBloqueos();
   }
 
   Future<void> _cargarEstadoBloqueos() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     DateTime ahora = DateTime.now();
-
     setState(() {
       for (var oficio in misOficios) {
         String nombre = oficio['nombre'];
         String? fechaStr = prefs.getString("fecha_servicio_$nombre");
-
         if (fechaStr != null) {
           DateTime fechaGuardada = DateTime.parse(fechaStr);
-          // esto es para q la memoria guarde y al reiniciar el cel no se olvide
           if (ahora.difference(fechaGuardada).inHours < 24) {
             serviciosBloqueados[nombre] = true;
           } else {
@@ -93,7 +130,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
 
   void enviarPedido() async {
     if (servicioSeleccionado.isEmpty || enviando) return;
-
     setState(() {
       enviando = true;
       cartelConfirmacion = "Solicitud de $servicioSeleccionado enviada";
@@ -108,21 +144,15 @@ class _ServiciosPageState extends State<ServiciosPage> {
       serviciosBloqueados[servicioSeleccionado] = true;
     });
 
-    // El cartel de arriba desaparece a los 5 segundos
     Timer(const Duration(seconds: 10), () {
       if (mounted) setState(() => cartelConfirmacion = "");
     });
 
-    // Desbloqueo en  horas de boton servicio enviado
     Timer(const Duration(hours: 1), () {
-      if (mounted) {
-        setState(() {
-          serviciosBloqueados[servicioSeleccionado] = false;
-        });
-      }
+      if (mounted)
+        setState(() => serviciosBloqueados[servicioSeleccionado] = false);
     });
 
-    // Esto anota la hora del pedido en la memoria del celular
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString("fecha_servicio_$servicioSeleccionado",
         DateTime.now().toIso8601String());
@@ -134,27 +164,21 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   void _iniciarTemporizador() {
-    timerDesmarcar
-        ?.cancel(); // duracion de espera de boton enviar en pantalla 3
+    timerDesmarcar?.cancel();
     timerDesmarcar = Timer(const Duration(seconds: 15), () {
-      if (mounted) {
-        setState(() {
-          servicioSeleccionado = "";
-        });
-      }
+      if (mounted) setState(() => servicioSeleccionado = "");
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 187, 233, 246),
       appBar: AppBar(
         backgroundColor: Colors.blue,
         centerTitle: true,
-        title: const Text(
-          "Barrio Seguro",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Barrio Seguro",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
           onPressed: () => Navigator.pop(context),
@@ -164,16 +188,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 15), // espacio arriba
-              const Text(
-                "Seleccioná tu servicio",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 15), // espacio abajo
+              const SizedBox(height: 15),
+              const Text("Seleccioná tu servicio",
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87)),
+              const SizedBox(height: 15),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -195,44 +216,46 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         onTap: estaBloqueado
                             ? null
                             : () {
-                                setState(() {
-                                  servicioSeleccionado = nombre;
-                                });
+                                setState(() => servicioSeleccionado = nombre);
                                 _iniciarTemporizador();
                               },
                         child: Container(
                           decoration: BoxDecoration(
+                            // USA LOS COLORES DE TU LISTA
                             color: estaBloqueado
                                 ? Colors.grey.shade400
                                 : (estaSeleccionado
-                                    ? misOficios[index]['color']
-                                    : Colors.blue.shade50),
+                                    ? misOficios[index]['colorPresionado']
+                                    : misOficios[index]['colorBase']),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: estaSeleccionado
                                   ? Colors.black
-                                  : Colors.blue.shade200,
+                                  : Colors.white.withOpacity(0.3),
                               width: 2,
                             ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(misOficios[index]['icono'],
+                              Icon(
+                                misOficios[index]['icono'],
+                                // USA EL COLOR DE ICONO DE TU LISTA
+                                color: estaBloqueado
+                                    ? Colors.grey
+                                    : misOficios[index]['colorIcono'],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                nombre,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  // USA EL COLOR DE LETRA DE TU LISTA
                                   color: estaBloqueado
                                       ? Colors.grey
-                                      : (estaSeleccionado
-                                          ? Colors.white
-                                          : misOficios[index]['color'])),
-                              const SizedBox(width: 8),
-                              Text(nombre,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: estaBloqueado
-                                          ? Colors.grey
-                                          : (estaSeleccionado
-                                              ? Colors.white
-                                              : Colors.black87))),
+                                      : misOficios[index]['colorLetra'],
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -241,6 +264,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   ),
                 ),
               ),
+              // --- BOTÓN ENVIAR ---
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: SizedBox(
@@ -250,28 +274,22 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade700,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          Colors.grey.shade400.withOpacity(1.0),
-                      elevation: 0,
+                      disabledBackgroundColor: Colors.grey.shade400,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
+                          borderRadius: BorderRadius.circular(15)),
                     ),
                     onPressed: servicioSeleccionado.isEmpty || enviando
                         ? null
                         : enviarPedido,
-                    child: Text(
-                      enviando ? "ENVIANDO..." : "ENVIAR PEDIDO",
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
+                    child: Text(enviando ? "ENVIANDO..." : "ENVIAR PEDIDO",
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
             ],
           ),
-
-          // --- CARTEL FLOTANTE (Solo el de arriba) ---
+          // --- CARTEL DE CONFIRMACIÓN (Este no lo tocamos) ---
           if (cartelConfirmacion.isNotEmpty)
             Positioned(
               top: 15,
@@ -286,10 +304,9 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   border: Border.all(color: Colors.green.shade400, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4))
                   ],
                 ),
                 child: Row(
@@ -298,15 +315,11 @@ class _ServiciosPageState extends State<ServiciosPage> {
                         color: Colors.green, size: 28),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        cartelConfirmacion,
-                        style: const TextStyle(
-                          color: Color(0xFF2E7D32),
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                        child: Text(cartelConfirmacion,
+                            style: const TextStyle(
+                                color: Color(0xFF2E7D32),
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold))),
                   ],
                 ),
               ),

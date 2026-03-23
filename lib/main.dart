@@ -47,8 +47,7 @@ class _InicioPageState extends State<InicioPage> {
   // **************************************************************************
   // GUIÍA: Cambiá este color para cambiar el fondo de toda la pantalla
   final Color colorFondoPantalla1 =
-      Color.fromARGB(255, 174, 205, 172); // Color del "piso"
-
+      Color.fromARGB(255, 187, 233, 246); // Color del "piso"
   // GUIÍA: Ya no usamos un solo color de selección global, ahora cada botón tiene el suyo abajo.
   // **************************************************************************
 
@@ -184,32 +183,36 @@ class _InicioPageState extends State<InicioPage> {
                       childAspectRatio: 1.05,
                       children: [
                         // [GUÍA DE COLORES]: (ID, ICONO, TEXTO, COLOR_REPOSO, COLOR_SELECCIONADO)
-                        _crearBoton("robo", Icons.shield_rounded, "Robo",
-                            Colors.blue.shade100, Colors.blue.shade600),
+                        _crearBoton(
+                            "robo",
+                            Icons.local_police,
+                            "Robo",
+                            Color.fromARGB(255, 250, 250, 249),
+                            const Color.fromARGB(255, 229, 136, 30)),
                         _crearBoton(
                             "sospechoso",
-                            Icons.visibility_rounded,
+                            Icons.psychology_alt_rounded,
                             "Sospechoso",
-                            Colors.orange.shade100,
-                            Colors.orange.shade600),
+                            Color.fromARGB(255, 250, 250, 249),
+                            const Color.fromARGB(255, 229, 136, 30)),
                         _crearBoton(
                             "incendio",
                             Icons.local_fire_department,
                             "Incendio",
-                            Colors.red.shade100,
-                            Colors.red.shade600),
+                            const Color.fromARGB(255, 250, 250, 249),
+                            const Color.fromARGB(255, 229, 136, 30)),
                         _crearBoton(
                             "siniestro",
                             Icons.car_crash_rounded,
                             "Siniestro",
-                            Colors.amber.shade100,
-                            Colors.amber.shade600),
+                            const Color.fromARGB(255, 250, 250, 249),
+                            const Color.fromARGB(255, 229, 136, 30)),
                         _crearBoton(
                             "ambulancia",
                             Icons.medical_services_rounded,
                             "Ambulancia",
-                            Colors.green.shade100,
-                            Colors.green.shade600),
+                            const Color.fromARGB(255, 250, 250, 249),
+                            const Color.fromARGB(255, 229, 136, 30)),
 
                         _botonMasOpciones(),
                       ],
@@ -339,7 +342,7 @@ class _InicioPageState extends State<InicioPage> {
       texto: "Más opciones",
       icono: Icons.keyboard_arrow_down,
       estaSeleccionado: false,
-      colorFondo: Colors.grey.shade200,
+      colorFondo: const Color.fromARGB(255, 252, 250, 250),
       accion: () {
         Navigator.push(
           context,

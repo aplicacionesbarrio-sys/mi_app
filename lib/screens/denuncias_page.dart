@@ -105,13 +105,16 @@ class _DenunciasPageState extends State<DenunciasPage> {
   Widget build(BuildContext context) {
     // color de arriba de la pantalla secundaria
     return Scaffold(
+      backgroundColor:
+          const Color.fromARGB(255, 187, 233, 246), // El color del "piso" p2
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.blue, // zona que contiene a barrio seguro
         title: const Text("Barrio Seguro", // zona de flecha
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+          icon: const Icon(Icons.arrow_back,
+              color: Colors.white, size: 28), // flecha p2
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -140,7 +143,8 @@ class _DenunciasPageState extends State<DenunciasPage> {
                             : Colors.blue,
                         colorFondo: reclamoSeleccionado == "agua"
                             ? Colors.blue
-                            : Colors.blue.shade100, // <--- CAMBIO AQUÍ
+                            : const Color.fromARGB(
+                                255, 253, 254, 254), // <--- CAMBIO AQUÍ boton
                         estaSeleccionado: reclamoSeleccionado == "agua",
                         accion: () => alPresionarBoton("agua"),
                       ),
@@ -156,7 +160,8 @@ class _DenunciasPageState extends State<DenunciasPage> {
                             : Colors.orange,
                         colorFondo: reclamoSeleccionado == "cable"
                             ? Colors.blue
-                            : Colors.blue.shade100, // <--- CAMBIO AQUÍ
+                            : const Color.fromARGB(
+                                255, 253, 254, 254), // <--- CAMBIO AQUÍ boton
                         estaSeleccionado: reclamoSeleccionado == "cable",
                         accion: () => alPresionarBoton("cable"),
                       ),
@@ -172,7 +177,8 @@ class _DenunciasPageState extends State<DenunciasPage> {
                             : const Color.fromARGB(255, 150, 37, 2),
                         colorFondo: reclamoSeleccionado == "gas"
                             ? Colors.blue
-                            : Colors.blue.shade100, // <--- CAMBIO AQUÍ
+                            : const Color.fromARGB(
+                                255, 253, 254, 254), // <--- CAMBIO AQUÍ boton
                         estaSeleccionado: reclamoSeleccionado == "gas",
                         accion: () => alPresionarBoton("gas"),
                       ), // boton para enviar reclamo
@@ -208,7 +214,7 @@ class _DenunciasPageState extends State<DenunciasPage> {
                         child: Text(
                           "Ver Servicios",
                           style: TextStyle(
-                              color: Colors.grey,
+                              color: Color.fromARGB(255, 21, 20, 20),
                               fontWeight: FontWeight.bold,
                               fontSize: 16),
                         ),
@@ -216,7 +222,7 @@ class _DenunciasPageState extends State<DenunciasPage> {
                       Center(
                         child: IconButton(
                           icon: const Icon(Icons.arrow_forward_ios,
-                              color: Colors.grey, size: 25),
+                              color: Color.fromARGB(255, 21, 20, 20), size: 25),
                           onPressed: () {
                             Navigator.push(
                               context,
