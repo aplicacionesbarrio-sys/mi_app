@@ -49,7 +49,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "icono": Icons.plumbing,
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 75, 115, 176),
-      "colorIcono": const Color.fromARGB(255, 153, 194, 73),
+      "colorIcono": const Color.fromARGB(255, 186, 129, 37),
       "colorLetra": Colors.black87,
     },
     {
@@ -57,14 +57,14 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "icono": Icons.electrical_services,
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 214, 125, 77),
-      "colorIcono": Color.fromARGB(255, 38, 122, 137),
+      "colorIcono": const Color.fromARGB(255, 38, 122, 137),
       "colorLetra": Colors.black87,
     },
     {
       "nombre": "Gasista",
       "icono": Icons.propane_tank,
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
-      "colorPresionado": Colors.red.shade900,
+      "colorPresionado": const Color.fromARGB(255, 206, 92, 92),
       "colorIcono": const Color.fromARGB(255, 21, 156, 25),
       "colorLetra": Colors.black87,
     },
@@ -73,7 +73,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "icono": Icons.vpn_key,
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color(0xFFA59210),
-      "colorIcono": Colors.black87,
+      "colorIcono": const Color.fromARGB(221, 156, 31, 31),
       "colorLetra": Colors.black87,
     },
     {
@@ -89,7 +89,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "icono": Icons.format_paint,
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 151, 83, 120),
-      "colorIcono": const Color.fromARGB(255, 31, 145, 19),
+      "colorIcono": const Color.fromARGB(255, 37, 34, 187),
       "colorLetra": Colors.black87,
     },
     {
@@ -117,7 +117,8 @@ class _ServiciosPageState extends State<ServiciosPage> {
         String? fechaStr = prefs.getString("fecha_servicio_$nombre");
         if (fechaStr != null) {
           DateTime fechaGuardada = DateTime.parse(fechaStr);
-          if (ahora.difference(fechaGuardada).inHours < 24) {
+          if (ahora.difference(fechaGuardada).inMinutes < 2) {
+            // duracion de desbloqueo p3 igual que 155
             serviciosBloqueados[nombre] = true;
           } else {
             serviciosBloqueados[nombre] = false;
@@ -145,12 +146,20 @@ class _ServiciosPageState extends State<ServiciosPage> {
     });
 
     Timer(const Duration(seconds: 10), () {
+      // cartel verde de arriba
       if (mounted) setState(() => cartelConfirmacion = "");
     });
 
-    Timer(const Duration(hours: 1), () {
-      if (mounted)
-        setState(() => serviciosBloqueados[servicioSeleccionado] = false);
+    // 1. Creamos una copia fija del nombre actual
+    String nombreParaDesbloquear = servicioSeleccionado;
+
+    Timer(const Duration(minutes: 2), () {
+      // duracion de desbloqueo p3 igual que 121
+      if (mounted) {
+        setState(() {
+          serviciosBloqueados[nombreParaDesbloquear] = false;
+        });
+      }
     });
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -227,6 +236,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                                 : (estaSeleccionado
                                     ? misOficios[index]['colorPresionado']
                                     : misOficios[index]['colorBase']),
+
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: estaSeleccionado
@@ -240,6 +250,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                             children: [
                               Icon(
                                 misOficios[index]['icono'],
+                                size: 35, // tamaño icono p3
                                 // USA EL COLOR DE ICONO DE TU LISTA
                                 color: estaBloqueado
                                     ? Colors.grey
@@ -249,6 +260,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
                               Text(
                                 nombre,
                                 style: TextStyle(
+                                  fontSize: 16, // tamaño letro botones serv p3
                                   fontWeight: FontWeight.bold,
                                   // USA EL COLOR DE LETRA DE TU LISTA
                                   color: estaBloqueado

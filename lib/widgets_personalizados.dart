@@ -95,7 +95,7 @@ class BotonAlertaPro extends StatelessWidget {
       height: 75,
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: Material(
-        color: estaSeleccionado ? const Color(0xFF2196F3) : colorFondo,
+        color: colorFondo,
         borderRadius: BorderRadius.circular(15),
         elevation: 5,
         shadowColor: Colors.black54,
