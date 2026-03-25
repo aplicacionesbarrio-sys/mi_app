@@ -6,8 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
-import 'screens/denuncias_page.dart';
-import 'screens/servicios_page.dart';
+import 'screens/reclamos_page.dart';
+
 import 'widgets_personalizados.dart';
 
 void main() async {
@@ -47,7 +47,7 @@ class _InicioPageState extends State<InicioPage> {
   // **************************************************************************
   // GUIÍA: Cambiá este color para cambiar el fondo de toda la pantalla
   final Color colorFondoPantalla1 =
-      Color.fromARGB(255, 187, 233, 246); // Color del "piso"
+      const Color.fromARGB(255, 187, 233, 246); // Color del "piso"
   // GUIÍA: Ya no usamos un solo color de selección global, ahora cada botón tiene el suyo abajo.
   // **************************************************************************
 
@@ -187,32 +187,32 @@ class _InicioPageState extends State<InicioPage> {
                             "robo",
                             Icons.local_police,
                             "Robo",
-                            Color.fromARGB(255, 250, 250, 249),
-                            Color.fromARGB(255, 41, 114, 18)),
+                            const Color.fromARGB(255, 250, 250, 249),
+                            const Color.fromARGB(255, 41, 114, 18)),
                         _crearBoton(
                             "sospechoso",
                             Icons.psychology_alt_rounded,
                             "Sospechoso",
-                            Color.fromARGB(255, 250, 250, 249),
-                            Color.fromARGB(255, 229, 219, 30)),
+                            const Color.fromARGB(255, 250, 250, 249),
+                            const Color.fromARGB(255, 229, 219, 30)),
                         _crearBoton(
                             "incendio",
                             Icons.local_fire_department,
                             "Incendio",
                             const Color.fromARGB(255, 250, 250, 249),
-                            Color.fromARGB(255, 215, 130, 27)),
+                            const Color.fromARGB(255, 215, 130, 27)),
                         _crearBoton(
                             "siniestro",
                             Icons.car_crash_rounded,
                             "Siniestro",
                             const Color.fromARGB(255, 250, 250, 249),
-                            Color.fromARGB(255, 50, 30, 229)),
+                            const Color.fromARGB(255, 50, 30, 229)),
                         _crearBoton(
                             "ambulancia",
                             Icons.medical_services_rounded,
                             "Ambulancia",
                             const Color.fromARGB(255, 250, 250, 249),
-                            Color.fromARGB(255, 87, 8, 110)),
+                            const Color.fromARGB(255, 87, 8, 110)),
 
                         _botonMasOpciones(),
                       ],
@@ -346,7 +346,7 @@ class _InicioPageState extends State<InicioPage> {
       accion: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const DenunciasPage()),
+          MaterialPageRoute(builder: (context) => const ReclamosPage()),
         );
       },
     );

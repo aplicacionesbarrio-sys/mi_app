@@ -117,7 +117,7 @@ class BotonAlertaPro extends StatelessWidget {
               ),
               Text(
                 texto,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,

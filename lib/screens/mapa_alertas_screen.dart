@@ -31,26 +31,26 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
   }
 
   Future cargarIconos() async {
-    iconoRobo = await BitmapDescriptor.fromAssetImage(
+    iconoRobo = await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(48, 48)),
       "assets/icons/robo.png",
     );
 
-    iconoSiniestro = await BitmapDescriptor.fromAssetImage(
+    iconoSiniestro = await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(48, 48)),
       "assets/icons/siniestro.png",
     );
 
-    iconoSospechoso = await BitmapDescriptor.fromAssetImage(
+    iconoSospechoso = await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(48, 48)),
       "assets/icons/sospechoso.png",
     );
-    iconoIncendio = await BitmapDescriptor.fromAssetImage(
+    iconoIncendio = await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(48, 48)),
       "assets/icons/incendio.png",
     );
 
-    iconoPolicia = await BitmapDescriptor.fromAssetImage(
+    iconoPolicia = await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(48, 48)),
       "assets/icons/policia.png",
     );
@@ -75,8 +75,6 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
     setState(() {
       tipoAlertaSeleccionada = tipo;
     });
-
-    print("Alerta seleccionada: $tipo");
   }
 
   BitmapDescriptor obtenerIcono(String tipo) {

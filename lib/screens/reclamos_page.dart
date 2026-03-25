@@ -3,18 +3,52 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // LA LIBRETA: Esta herramienta permite que la app anote cosas en el disco del celular
 import '../widgets_personalizados.dart';
 import 'servicios_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Pegá esta
+import 'package:geolocator/geolocator.dart'; // <--- Y esta
 
-class DenunciasPage extends StatefulWidget {
-  const DenunciasPage({super.key});
+class ReclamosPage extends StatefulWidget {
+  const ReclamosPage({super.key});
 
   @override
-  State<DenunciasPage> createState() => _DenunciasPageState();
+  State<ReclamosPage> createState() => _ReclamosPageState();
 }
 
-class _DenunciasPageState extends State<DenunciasPage> {
+class _ReclamosPageState extends State<ReclamosPage> {
   String reclamoSeleccionado = "";
   Timer? _timer;
   String mensajeConfirmacion = "";
+// FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL
+  Future<void> enviarReclamoAlFirebase() async {
+    if (reclamoSeleccionado.isEmpty) {
+      setState(() => mensajeConfirmacion = "Seleccioná un problema primero");
+      return;
+    }
+
+    try {
+      // 1. Pedir permiso de GPS al vecino
+      LocationPermission permission = await Geolocator.requestPermission();
+
+      if (permission == LocationPermission.denied) {
+        setState(() => mensajeConfirmacion = "Falta permiso de GPS");
+        return;
+      }
+
+      // 2. Obtener ubicación real
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      // 3. Mandar a la carpeta 'reclamos' de Firebase
+      await FirebaseFirestore.instance.collection('reclamos').add({
+        'tipo': reclamoSeleccionado,
+        'nombre_vecino': 'Diego',
+        'telefono': '3804521058',
+        'fecha': FieldValue.serverTimestamp(),
+        'ubicacion': GeoPoint(position.latitude, position.longitude),
+      });
+    } catch (e) {
+      setState(() => mensajeConfirmacion = "Error al enviar: $e");
+    }
+  }
 
   // Mapa de bloqueo: Es la lista que dice quién está gris (true) o azul (false)
   Map<String, bool> reclamosBloqueados = {
@@ -82,7 +116,8 @@ class _DenunciasPageState extends State<DenunciasPage> {
     String tipoEnviado = reclamoSeleccionado;
 
     setState(() {
-      reclamosBloqueados[tipoEnviado] = true;
+      reclamosBloqueados[tipoEnviado] =
+          true; // parte del carten verde de arriba p3
       mensajeConfirmacion = "Reclamo de ${tipoEnviado.toUpperCase()} enviado";
       reclamoSeleccionado = "";
     });
