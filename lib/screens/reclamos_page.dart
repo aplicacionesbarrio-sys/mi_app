@@ -5,6 +5,7 @@ import '../widgets_personalizados.dart';
 import 'servicios_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Pegá esta
 import 'package:geolocator/geolocator.dart'; // <--- Y esta
+import 'package:vibration/vibration.dart';
 
 class ReclamosPage extends StatefulWidget {
   const ReclamosPage({super.key});
@@ -17,9 +18,20 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String reclamoSeleccionado = "";
   Timer? _timer;
   String mensajeConfirmacion = "";
-// FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL
-  Future<void> enviarReclamoAlFirebase() async {
-    if (reclamoSeleccionado.isEmpty) {
+
+  // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL
+  Future<void> enviarReclamoAlFirebase(String tipoRecibido) async {
+    String empresaDestino = "";
+
+    if (tipoRecibido == "pérdida de agua") {
+      empresaDestino = "aguas de la rioja";
+    } else if (tipoRecibido == "cable caido") {
+      empresaDestino = "edelar";
+    } else if (tipoRecibido == "perdida de gas") {
+      empresaDestino = "ecogas";
+    }
+
+    if (tipoRecibido.isEmpty) {
       setState(() => mensajeConfirmacion = "Seleccioná un problema primero");
       return;
     }
@@ -39,11 +51,14 @@ class _ReclamosPageState extends State<ReclamosPage> {
 
       // 3. Mandar a la carpeta 'reclamos' de Firebase
       await FirebaseFirestore.instance.collection('reclamos').add({
-        'tipo': reclamoSeleccionado,
+        'tipo': tipoRecibido,
         'nombre_vecino': 'Diego',
         'telefono': '3804521058',
         'fecha': FieldValue.serverTimestamp(),
         'ubicacion': GeoPoint(position.latitude, position.longitude),
+        'link_mapa':
+            "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}",
+        'empresa_destino': empresaDestino,
       });
     } catch (e) {
       setState(() => mensajeConfirmacion = "Error al enviar: $e");
@@ -52,9 +67,9 @@ class _ReclamosPageState extends State<ReclamosPage> {
 
   // Mapa de bloqueo: Es la lista que dice quién está gris (true) o azul (false)
   Map<String, bool> reclamosBloqueados = {
-    "agua": false,
-    "cable": false,
-    "gas": false
+    "pérdida de agua": false,
+    "cable caído": false,
+    "pérdida de gas": false
   };
 
   @override
@@ -71,16 +86,18 @@ class _ReclamosPageState extends State<ReclamosPage> {
     DateTime ahora = DateTime.now();
 
     setState(() {
-      for (String tipo in ["agua", "cable", "gas"]) {
+      // Corregido para que busque los nombres nuevos en la libreta
+      for (String tipo in [
+        "pérdida de agua",
+        "cable caído",
+        "pérdida de gas"
+      ]) {
         String? fechaGuardadaStr = prefs.getString("fecha_$tipo");
         if (fechaGuardadaStr != null) {
           DateTime fechaGuardada = DateTime.parse(fechaGuardadaStr);
-          // Si la diferencia de tiempo es menor a 24 horas, lo dejamos bloqueado
           if (ahora.difference(fechaGuardada).inMinutes < 2) {
-            // boton rep igual q 97
             reclamosBloqueados[tipo] = true;
           } else {
-            // Si ya pasó el tiempo, borramos la nota de la libreta para que se libere
             reclamosBloqueados[tipo] = false;
             prefs.remove("fecha_$tipo");
           }
@@ -90,15 +107,12 @@ class _ReclamosPageState extends State<ReclamosPage> {
   }
 
   // --- FUNCIÓN: ANOTAR EN LA LIBRETA ---
-  // Sirve para guardar la fecha y hora exacta en la que se apretó "Enviar"
   Future<void> _guardarBloqueo(String tipo) async {
     final prefs = await SharedPreferences.getInstance();
-    // Guardamos la hora actual como un texto (String) para que no se borre al cerrar la app
     await prefs.setString("fecha_$tipo", DateTime.now().toIso8601String());
   }
 
   // --- FUNCIÓN: CUANDO TOCÁS UN BOTÓN ---
-  // Controla la selección y el reloj de 15 segundos antes de que se desmarque
   void alPresionarBoton(String tipo) {
     if (reclamosBloqueados[tipo] == true) return;
     setState(() => reclamoSeleccionado = tipo);
@@ -110,27 +124,34 @@ class _ReclamosPageState extends State<ReclamosPage> {
   }
 
   // --- FUNCIÓN: EL ENVÍO FINAL ---
-  // Aquí es donde sucede la magia: bloquea el botón, muestra el cartel y GUARDA en la memoria
   void enviarReclamoFinal() async {
     if (reclamoSeleccionado.isEmpty) return;
     String tipoEnviado = reclamoSeleccionado;
 
+    // 1. Envía a Firebase
+    await enviarReclamoAlFirebase(tipoEnviado);
+
+    // 2. Hace vibrar el celu (Asegurate de tener el import arriba)
+    if (await Vibration.hasVibrator()) {
+      Vibration.vibrate(duration: 500);
+    }
+
+    // 3. Actualiza la pantalla
     setState(() {
-      reclamosBloqueados[tipoEnviado] =
-          true; // parte del carten verde de arriba p3
+      reclamosBloqueados[tipoEnviado] = true;
       mensajeConfirmacion = "Reclamo de ${tipoEnviado.toUpperCase()} enviado";
       reclamoSeleccionado = "";
     });
 
-    // LLAMAMOS A LA FUNCIÓN DE GUARDADO PERMANENTE
+    // 4. Guarda en la libreta (SharedPreferences)
     await _guardarBloqueo(tipoEnviado);
 
-    // Timer para el cartel verde de arriba
+    // 5. Quita el mensaje verde después de 10 segundos
     Timer(const Duration(seconds: 10), () {
       if (mounted) setState(() => mensajeConfirmacion = "");
     });
 
-    // --- CÓDIGO AGREGADO: Timer para desbloquear el botón reportado igual q 45
+    // 6. Desbloquea el botón después de 2 minutos
     Timer(const Duration(minutes: 2), () {
       if (mounted) {
         setState(() {
@@ -142,25 +163,21 @@ class _ReclamosPageState extends State<ReclamosPage> {
 
   @override
   void dispose() {
-    // FUNCIÓN: Apaga el reloj cuando te vas de la pantalla para que no gaste batería
     _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // color de arriba de la pantalla secundaria
     return Scaffold(
-      backgroundColor:
-          const Color.fromARGB(255, 187, 233, 246), // El color del "piso" p2
+      backgroundColor: const Color.fromARGB(255, 187, 233, 246),
       appBar: AppBar(
-        backgroundColor: Colors.blue, // zona que contiene a barrio seguro
-        title: const Text("Barrio Seguro", // zona de flecha
+        backgroundColor: Colors.blue,
+        title: const Text("Barrio Seguro",
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back,
-              color: Colors.white, size: 28), // flecha p2
+          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -169,7 +186,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
           SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 30), // titulo
+                const SizedBox(height: 30),
                 const Text("Selecciona tu reclamo",
                     style:
                         TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
@@ -180,67 +197,66 @@ class _ReclamosPageState extends State<ReclamosPage> {
                     children: [
                       // 1. Botón de Pérdida de Agua
                       BotonAlertaPro(
-                        texto: reclamosBloqueados["agua"]!
+                        texto: (reclamosBloqueados["pérdida de agua"] ?? false)
                             ? "Reportado"
                             : "Pérdida de agua",
                         icono: Icons.water_drop,
-                        // Si está bloqueado es GRIS, sino es CELESTE
-                        iconoColor: reclamosBloqueados["agua"]!
-                            ? Colors.grey
-                            : const Color.fromARGB(255, 140, 190, 231),
-                        // Si está bloqueado es GRIS CLARITO, sino depende de si está seleccionado
-                        colorFondo: reclamosBloqueados["agua"]!
-                            ? Colors.grey.shade400
-                            : (reclamoSeleccionado == "agua"
-                                ? const Color.fromARGB(255, 41, 183, 26)
-                                : const Color.fromARGB(255, 253, 254, 254)),
-                        estaSeleccionado: reclamoSeleccionado == "agua",
-                        accion: () => alPresionarBoton("agua"),
+                        iconoColor:
+                            (reclamosBloqueados["pérdida de agua"] ?? false)
+                                ? Colors.grey
+                                : const Color.fromARGB(255, 140, 190, 231),
+                        colorFondo:
+                            (reclamosBloqueados["pérdida de agua"] ?? false)
+                                ? Colors.grey.shade400
+                                : (reclamoSeleccionado == "pérdida de agua"
+                                    ? const Color.fromARGB(255, 41, 183, 26)
+                                    : const Color.fromARGB(255, 253, 254, 254)),
+                        estaSeleccionado:
+                            reclamoSeleccionado == "pérdida de agua",
+                        accion: () => alPresionarBoton("pérdida de agua"),
                       ),
                       const SizedBox(height: 10),
+
                       // 2. Botón de Cable Caído
                       BotonAlertaPro(
-                        texto: reclamosBloqueados["cable"]!
+                        texto: (reclamosBloqueados["cable caído"] ?? false)
                             ? "Reportado"
                             : "Cable caído",
                         icono: Icons.electrical_services,
-                        // Si está bloqueado es GRIS, sino es NARANJA
-                        iconoColor: reclamosBloqueados["cable"]!
+                        iconoColor: (reclamosBloqueados["cable caído"] ?? false)
                             ? Colors.grey
                             : Colors.orange,
-                        // Si está bloqueado es GRIS CLARITO, sino depende de si está seleccionado
-                        colorFondo: reclamosBloqueados["cable"]!
+                        colorFondo: (reclamosBloqueados["cable caído"] ?? false)
                             ? Colors.grey.shade400
-                            : (reclamoSeleccionado == "cable"
+                            : (reclamoSeleccionado == "cable caído"
                                 ? const Color.fromARGB(255, 95, 71, 218)
                                 : const Color.fromARGB(255, 253, 254, 254)),
-                        estaSeleccionado: reclamoSeleccionado == "cable",
-                        accion: () => alPresionarBoton("cable"),
+                        estaSeleccionado: reclamoSeleccionado == "cable caído",
+                        accion: () => alPresionarBoton("cable caído"),
                       ),
                       const SizedBox(height: 10),
+
                       // 3. Botón de Pérdida de Gas
                       BotonAlertaPro(
-                        texto: reclamosBloqueados["gas"]!
+                        texto: (reclamosBloqueados["pérdida de gas"] ?? false)
                             ? "Reportado"
                             : "Pérdida de gas",
-                        icono: Icons
-                            .warning_amber_rounded, // Icono de nubecita para el gas
-                        // Si está bloqueado es GRIS, sino es el color original
-                        iconoColor: reclamosBloqueados["gas"]!
-                            ? Colors.grey
-                            : const Color.fromARGB(
-                                255, 174, 73, 10), // Un amarillo/naranja
-                        // Lógica de fondo: Gris si está bloqueado, color de selección si se toca
-                        colorFondo: reclamosBloqueados["gas"]!
-                            ? Colors.grey.shade400
-                            : (reclamoSeleccionado == "gas"
-                                ? const Color.fromARGB(
-                                    255, 206, 218, 71) // Rojo al tocarlo
-                                : const Color.fromARGB(
-                                    255, 253, 254, 254)), // Blanco normal
-                        estaSeleccionado: reclamoSeleccionado == "gas",
-                        accion: () => alPresionarBoton("gas"),
-                      ), // boton para enviar reclamo
+                        icono: Icons.warning_amber_rounded,
+                        iconoColor:
+                            (reclamosBloqueados["pérdida de gas"] ?? false)
+                                ? Colors.grey
+                                : const Color.fromARGB(255, 174, 73, 10),
+                        colorFondo:
+                            (reclamosBloqueados["pérdida de gas"] ?? false)
+                                ? Colors.grey.shade400
+                                : (reclamoSeleccionado == "pérdida de gas"
+                                    ? const Color.fromARGB(255, 206, 218, 71)
+                                    : const Color.fromARGB(255, 253, 254, 254)),
+                        estaSeleccionado:
+                            reclamoSeleccionado == "pérdida de gas",
+                        accion: () => alPresionarBoton("pérdida de gas"),
+                      ),
+
                       const SizedBox(height: 40),
                       SizedBox(
                         width: double.infinity,
@@ -257,7 +273,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
                                 ? null
                                 : enviarReclamoFinal,
                             child: const Center(
-                              // boton enviar reclamo
                               child: Text("Enviar Reclamo",
                                   style: TextStyle(
                                       color: Colors.white,
@@ -267,7 +282,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
                           ),
                         ),
                       ),
-                      // --- TEXTO Y FLECHA PARA IR A SERVICIOS ---
                       const SizedBox(height: 20),
                       const Center(
                         child: Text(
@@ -291,8 +305,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
                           },
                         ),
                       ),
-                      const SizedBox(
-                          height: 40), // Espacio final para que se vea bien
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),

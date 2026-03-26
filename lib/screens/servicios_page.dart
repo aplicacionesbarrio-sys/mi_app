@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({super.key});
@@ -33,7 +35,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "icono": Icons.tire_repair,
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color(0xFFD75BDB),
-      "colorIcono": Colors.yellow,
+      "colorIcono": const Color.fromARGB(255, 179, 165, 41),
       "colorLetra": Colors.black87,
     },
     {
@@ -131,19 +133,39 @@ class _ServiciosPageState extends State<ServiciosPage> {
 
   void enviarPedido() async {
     if (servicioSeleccionado.isEmpty || enviando) return;
+
     setState(() {
       enviando = true;
       cartelConfirmacion = "Solicitud de $servicioSeleccionado enviada";
     });
 
-    await FirebaseFirestore.instance.collection('pedidos_servicios').add({
-      'servicio': servicioSeleccionado,
-      'fecha': DateTime.now(),
-    });
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
 
-    setState(() {
-      serviciosBloqueados[servicioSeleccionado] = true;
-    });
+      // 1. Hace vibrar el celu
+      if (await Vibration.hasVibrator()) {
+        Vibration.vibrate(duration: 500);
+      }
+
+      // 2. Envío a Firebase (Ahora sí va a reconocer 'position')
+      await FirebaseFirestore.instance.collection('servicios').add({
+        'tipo': servicioSeleccionado,
+        'nombre_vecino': 'Diego',
+        'telefono': '3804521058',
+        'fecha': FieldValue.serverTimestamp(),
+        'ubicacion': GeoPoint(position.latitude, position.longitude),
+        'link_mapa':
+            'https://www.google.com/maps?q=${position.latitude},${position.longitude}',
+        'encargado': 'admin de servicios',
+      });
+
+      setState(() {
+        serviciosBloqueados[servicioSeleccionado] = true;
+      });
+    } catch (e) {
+      debugPrint("Error: $e");
+    }
 
     Timer(const Duration(seconds: 10), () {
       // cartel verde de arriba

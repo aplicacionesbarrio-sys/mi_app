@@ -7,12 +7,16 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
 import 'screens/reclamos_page.dart';
-
 import 'widgets_personalizados.dart';
+import 'package:vibration/vibration.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // --- OBTENER TOKEN PARA NOTIFICACIONES ---
+  String? token = await FirebaseMessaging.instance.getToken();
+  print("TOKEN DEL DISPOSITIVO: $token");
   runApp(const MyApp());
 }
 
@@ -42,14 +46,8 @@ class InicioPage extends StatefulWidget {
 }
 
 class _InicioPageState extends State<InicioPage> {
-  // **************************************************************************
-  // [CONFIGURACIÓN DE COLORES - CAMBIALOS AQUÍ]
-  // **************************************************************************
-  // GUIÍA: Cambiá este color para cambiar el fondo de toda la pantalla
-  final Color colorFondoPantalla1 =
-      const Color.fromARGB(255, 187, 233, 246); // Color del "piso"
-  // GUIÍA: Ya no usamos un solo color de selección global, ahora cada botón tiene el suyo abajo.
-  // **************************************************************************
+  // [CONFIGURACIÓN DE COLORES]
+  final Color colorFondoPantalla1 = const Color.fromARGB(255, 187, 233, 246);
 
   int contadorAlertas = 5;
   double lat = 0;
@@ -58,8 +56,7 @@ class _InicioPageState extends State<InicioPage> {
   Timer? temporizadorAlerta;
   String mensajeConfirmacion = "";
   bool botonHabilitado = true;
-  bool mostrarAvisoLlamada =
-      false; // Controla el botón de "atento ya recibirá..."
+  bool mostrarAvisoLlamada = false;
 
   @override
   void initState() {
@@ -76,26 +73,57 @@ class _InicioPageState extends State<InicioPage> {
     });
   }
 
-  // --- FUNCIÓN: ENVIAR ALERTA (Lógica Intacta) ---
-  void enviarAlerta() {
+  // --- FUNCIÓN: ENVIAR ALERTA (REPARADA) ---
+  void enviarAlerta() async {
     if (tipoAlertaSeleccionada == "" || botonHabilitado == false) return;
+    List<String> paraQuien = [];
+
+    if (tipoAlertaSeleccionada == "robo" ||
+        tipoAlertaSeleccionada == "sospechoso") {
+      paraQuien = ["comisaria", "911", "comunicaciones", "vecinos_100m"];
+    } else if (tipoAlertaSeleccionada == "incendio") {
+      paraQuien = [
+        "911",
+        "comisaria",
+        "bomberos",
+        "proteccion_ciudadana",
+        "vecinos_100m"
+      ];
+    } else if (tipoAlertaSeleccionada == "siniestro") {
+      paraQuien = [
+        "911",
+        "comisaria",
+        "proteccion_ciudadana",
+        "bomberos",
+        "vecinos_100m"
+      ];
+    } else if (tipoAlertaSeleccionada == "ambulancia") {
+      paraQuien = ["911", "107"];
+    }
 
     setState(() {
       botonHabilitado = false;
       contadorAlertas++;
-      mensajeConfirmacion = " Alerta por $tipoAlertaSeleccionada enviada";
+      mensajeConfirmacion =
+          " Alerta por ${tipoAlertaSeleccionada.toUpperCase()} enviada";
       mostrarAvisoLlamada = false;
     });
-
+    if (await Vibration.hasVibrator()) {
+      Vibration.vibrate(
+          duration: 500); // 500ms es medio segundo de vibración firme
+    }
+    // REPARACIÓN: Ahora el link lleva la posición REAL y sumamos tus datos
     FirebaseFirestore.instance.collection('alertas').add({
-      'numero': contadorAlertas,
       'tipo': tipoAlertaSeleccionada,
-      'fecha': DateTime.now(),
-      'lat': lat,
-      'lng': lng,
+      'nombre_vecino': 'Diego',
+      'telefono': '3804521058',
+      'fecha': FieldValue.serverTimestamp(),
+      'ubicacion': GeoPoint(lat, lng),
+      'link_mapa': 'https://www.google.com/maps?q=$lat,$lng',
+      'destinatarios': paraQuien,
     });
 
-    // --- TIEMPO 1: Cartel de ARRIBA (10 segundos) ---
+    // --- TIEMPOS (MANTENIDOS) ---
     Future.delayed(const Duration(seconds: 10), () {
       if (mounted) {
         setState(() {
@@ -105,7 +133,6 @@ class _InicioPageState extends State<InicioPage> {
       }
     });
 
-    // --- TIEMPO 2: Cartel de ABAJO ---
     Future.delayed(const Duration(seconds: 20), () {
       if (mounted) {
         setState(() {
@@ -114,7 +141,6 @@ class _InicioPageState extends State<InicioPage> {
       }
     });
 
-    // --- TIEMPO 3: Bloqueo del botón enviar alerta
     Future.delayed(const Duration(seconds: 22), () {
       if (mounted) {
         setState(() {
@@ -124,7 +150,6 @@ class _InicioPageState extends State<InicioPage> {
     });
   }
 
-  // --- FUNCIÓN: CUANDO TOCÁS UN BOTÓN (Lógica Intacta) ---
   void alPresionarBoton(String tipo) {
     setState(() => tipoAlertaSeleccionada = tipo);
     temporizadorAlerta?.cancel();
@@ -133,7 +158,6 @@ class _InicioPageState extends State<InicioPage> {
     });
   }
 
-  // --- FUNCIÓN AUXILIAR MODIFICADA (Ahora recibe color base y color resaltado) ---
   Widget _crearBoton(String tipo, IconData icono, String etiqueta,
       Color colorBase, Color colorResaltado) {
     bool estaSeleccionado = tipoAlertaSeleccionada == tipo;
@@ -141,7 +165,6 @@ class _InicioPageState extends State<InicioPage> {
       texto: etiqueta,
       icono: icono,
       estaSeleccionado: estaSeleccionado,
-      // [CAMBIO DE COLOR]: Si está seleccionado usa su 'colorResaltado', si no su 'colorBase'
       colorFondo: estaSeleccionado ? colorResaltado : colorBase,
       accion: () => alPresionarBoton(tipo),
     );
@@ -151,14 +174,11 @@ class _InicioPageState extends State<InicioPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Barrio Seguro",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Barrio Seguro",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: Container(
-        // [COLOR DE FONDO DE LA PANTALLA]
         width: double.infinity,
         height: double.infinity,
         color: colorFondoPantalla1,
@@ -182,7 +202,6 @@ class _InicioPageState extends State<InicioPage> {
                       crossAxisSpacing: 15,
                       childAspectRatio: 1.05,
                       children: [
-                        // [GUÍA DE COLORES]: (ID, ICONO, TEXTO, COLOR_REPOSO, COLOR_SELECCIONADO)
                         _crearBoton(
                             "robo",
                             Icons.local_police,
@@ -213,13 +232,11 @@ class _InicioPageState extends State<InicioPage> {
                             "Ambulancia",
                             const Color.fromARGB(255, 250, 250, 249),
                             const Color.fromARGB(255, 87, 8, 110)),
-
                         _botonMasOpciones(),
                       ],
                     ),
                   ),
                   const SizedBox(height: 30),
-                  // [BOTÓN ENVIAR ALERTA - SIN CAMBIOS EN LÓGICA]
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: SizedBox(
@@ -231,10 +248,8 @@ class _InicioPageState extends State<InicioPage> {
                           foregroundColor: Colors.white,
                           elevation: 4,
                           disabledBackgroundColor: Colors.grey.shade400,
-                          disabledForegroundColor: Colors.white70,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
+                              borderRadius: BorderRadius.circular(15)),
                         ),
                         onPressed:
                             (tipoAlertaSeleccionada.isEmpty || !botonHabilitado)
@@ -243,10 +258,9 @@ class _InicioPageState extends State<InicioPage> {
                         child: Text(
                           botonHabilitado ? "ENVIAR ALERTA" : "ESPERE...",
                           style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2),
                         ),
                       ),
                     ),
@@ -255,8 +269,6 @@ class _InicioPageState extends State<InicioPage> {
                 ],
               ),
             ),
-
-            // [CARTEL VERDE DE ARRIBA - NO TOCADO]
             if (mensajeConfirmacion.isNotEmpty)
               Positioned(
                 top: 10,
@@ -281,21 +293,15 @@ class _InicioPageState extends State<InicioPage> {
                           color: Colors.green, size: 28),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          mensajeConfirmacion,
-                          style: const TextStyle(
-                            color: Colors.green,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                          child: Text(mensajeConfirmacion,
+                              style: const TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold))),
                     ],
                   ),
                 ),
               ),
-
-            // [AVISO ABAJO - NO TOCADO]
             if (mostrarAvisoLlamada)
               Positioned(
                 bottom: 30,
@@ -318,14 +324,11 @@ class _InicioPageState extends State<InicioPage> {
                     children: [
                       Icon(Icons.phone_in_talk, color: Colors.white),
                       SizedBox(width: 10),
-                      Text(
-                        "Atento, ya recibirá una llamada",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                      Text("Atento, ya recibirá una llamada",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16)),
                     ],
                   ),
                 ),
@@ -336,7 +339,6 @@ class _InicioPageState extends State<InicioPage> {
     );
   }
 
-  // --- BOTÓN MÁS OPCIONES ---
   Widget _botonMasOpciones() {
     return BotonAlerta(
       texto: "Más opciones",
@@ -344,11 +346,9 @@ class _InicioPageState extends State<InicioPage> {
       estaSeleccionado: false,
       colorFondo: const Color.fromARGB(255, 252, 250, 250),
       accion: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ReclamosPage()),
-        );
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const ReclamosPage()));
       },
     );
   }
-} // CIERRE DE LA CLASE _InicioPageState 
+}
