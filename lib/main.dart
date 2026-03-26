@@ -196,6 +196,7 @@ class _InicioPageState extends State<InicioPage> {
   String mensajeConfirmacion = "";
   bool botonHabilitado = true;
   bool mostrarAvisoLlamada = false;
+  List<String> alertasBloqueadas = [];
 
   @override
   void initState() {
@@ -215,6 +216,7 @@ class _InicioPageState extends State<InicioPage> {
   // --- FUNCIÓN: ENVIAR ALERTA (MANTENIDA) ---
   void enviarAlerta() async {
     if (tipoAlertaSeleccionada == "" || botonHabilitado == false) return;
+    String alertaMandada = tipoAlertaSeleccionada;
     List<String> paraQuien = [];
 
     if (tipoAlertaSeleccionada == "robo" ||
@@ -246,6 +248,7 @@ class _InicioPageState extends State<InicioPage> {
       mensajeConfirmacion =
           " Alerta por ${tipoAlertaSeleccionada.toUpperCase()} enviada";
       mostrarAvisoLlamada = false;
+      alertasBloqueadas.add(tipoAlertaSeleccionada);
     });
     if (await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 500);
@@ -262,6 +265,7 @@ class _InicioPageState extends State<InicioPage> {
     });
 
     Future.delayed(const Duration(seconds: 10), () {
+      // cartel verde de arriba
       if (mounted) {
         setState(() {
           mensajeConfirmacion = "";
@@ -271,6 +275,7 @@ class _InicioPageState extends State<InicioPage> {
     });
 
     Future.delayed(const Duration(seconds: 20), () {
+      // boton gris de enviar
       if (mounted) {
         setState(() {
           mostrarAvisoLlamada = false;
@@ -279,9 +284,20 @@ class _InicioPageState extends State<InicioPage> {
     });
 
     Future.delayed(const Duration(seconds: 22), () {
+      // cartel de abajo ya lo llamaran
       if (mounted) {
         setState(() {
           botonHabilitado = true;
+        });
+
+        // 3. AGREGÁ ESTO: El que desbloquea el ICONO a los 5 minutos
+        Future.delayed(const Duration(minutes: 2), () {
+          if (mounted) {
+            setState(() {
+              alertasBloqueadas
+                  .remove(alertaMandada); // El ícono vuelve a estar disponible
+            });
+          }
         });
       }
     });
@@ -289,9 +305,15 @@ class _InicioPageState extends State<InicioPage> {
 
   void alPresionarBoton(String tipo) {
     setState(() => tipoAlertaSeleccionada = tipo);
+
+    // Cancelamos cualquier temporizador previo para que no se pisen
     temporizadorAlerta?.cancel();
-    temporizadorAlerta = Timer(const Duration(seconds: 15), () {
-      if (mounted) setState(() => tipoAlertaSeleccionada = "");
+
+    //  El botón robo queda "pintado" este tiempo
+    temporizadorAlerta = Timer(const Duration(minutes: 2), () {
+      if (mounted) {
+        setState(() => tipoAlertaSeleccionada = "");
+      }
     });
   }
 
@@ -302,8 +324,14 @@ class _InicioPageState extends State<InicioPage> {
       texto: etiqueta,
       icono: icono,
       estaSeleccionado: estaSeleccionado,
-      colorFondo: estaSeleccionado ? colorResaltado : colorBase,
-      accion: () => alPresionarBoton(tipo),
+      colorFondo: alertasBloqueadas.contains(tipo)
+          ? Colors.grey.shade400 // Se pone gris si está bloqueado
+          : (estaSeleccionado ? colorResaltado : colorBase),
+      accion: () {
+        if (!alertasBloqueadas.contains(tipo)) {
+          alPresionarBoton(tipo);
+        }
+      },
     );
   }
 
