@@ -39,7 +39,7 @@ class BotonAlerta extends StatelessWidget {
                   padding: const EdgeInsets.all(10),
                   child: rutaImagen != null
                       ? Image.asset(rutaImagen!,
-                          height: 60, fit: BoxFit.contain)
+                          height: 50, fit: BoxFit.contain)
                       : Icon(icono,
                           size: 50,
                           color:
@@ -69,7 +69,6 @@ class BotonAlerta extends StatelessWidget {
 // ---------------------------------------------------------
 // 2. EL MOLDE ANCHO (Para Reclamos / Segunda Pantalla)
 // ---------------------------------------------------------
-// ESTE QUEDA IGUAL, NO TOCAMOS TUS ANOTACIONES NI LÓGICA
 class BotonAlertaPro extends StatelessWidget {
   final String texto;
   final IconData icono;
@@ -92,35 +91,45 @@ class BotonAlertaPro extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 75,
-      margin: const EdgeInsets.symmetric(vertical: 10),
+      height: 60, // Altura para que entre la flecha de la pág 3
+      margin: const EdgeInsets.symmetric(vertical: 5),
       child: Material(
         color: colorFondo,
         borderRadius: BorderRadius.circular(15),
-        elevation: 5,
-        shadowColor: Colors.black54,
+        elevation: 3,
         child: InkWell(
           borderRadius: BorderRadius.circular(15),
           onTap: accion,
           child: Stack(
-            alignment: Alignment.center,
+            // 👈 Stack nos permite encimar cosas
+            alignment: Alignment.center, // 👈 Centra todo lo que esté adentro
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                    padding: const EdgeInsets.only(left: 25),
-                    child: Icon(
-                      icono,
-                      size: 35,
-                      color: iconoColor,
-                    )),
+              // 1. EL ICONO ANCLADO A LA IZQUIERDA
+              Positioned(
+                left: 20, // Distancia desde el borde izquierdo
+                child: Icon(
+                  icono,
+                  size: 30,
+                  color: iconoColor,
+                ),
               ),
-              Text(
-                texto,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+
+              // 2. EL TEXTO TOTALMENTE CENTRADO
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal:
+                        60), // Margen para que el texto largo no pise el icono
+                child: Text(
+                  texto.toUpperCase(),
+                  textAlign:
+                      TextAlign.center, // Texto centrado en su propio bloque
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: estaSeleccionado ? Colors.white : Colors.black87,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
