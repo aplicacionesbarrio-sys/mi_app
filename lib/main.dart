@@ -249,6 +249,7 @@ class _InicioPageState extends State<InicioPage> {
           " Alerta por ${tipoAlertaSeleccionada.toUpperCase()} enviada";
       mostrarAvisoLlamada = false;
       alertasBloqueadas.add(tipoAlertaSeleccionada);
+      tipoAlertaSeleccionada = "";
     });
     if (await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 500);
@@ -275,7 +276,7 @@ class _InicioPageState extends State<InicioPage> {
     });
 
     Future.delayed(const Duration(seconds: 20), () {
-      // boton gris de enviar
+      // boton gris de enviar alerta
       if (mounted) {
         setState(() {
           mostrarAvisoLlamada = false;
@@ -290,8 +291,8 @@ class _InicioPageState extends State<InicioPage> {
           botonHabilitado = true;
         });
 
-        // 3. AGREGÁ ESTO: El que desbloquea el ICONO a los 5 minutos
-        Future.delayed(const Duration(minutes: 2), () {
+        //  desbloquea el ICONO despues de una alarma
+        Timer(const Duration(seconds: 10), () {
           if (mounted) {
             setState(() {
               alertasBloqueadas
@@ -309,8 +310,8 @@ class _InicioPageState extends State<InicioPage> {
     // Cancelamos cualquier temporizador previo para que no se pisen
     temporizadorAlerta?.cancel();
 
-    //  El botón robo queda "pintado" este tiempo
-    temporizadorAlerta = Timer(const Duration(minutes: 2), () {
+    //  El botón robo queda "pintado" este tiempo/ si no apreta enviar se desmarca
+    temporizadorAlerta = Timer(const Duration(seconds: 15), () {
       if (mounted) {
         setState(() => tipoAlertaSeleccionada = "");
       }
@@ -416,10 +417,12 @@ class _InicioPageState extends State<InicioPage> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15)),
                         ),
-                        onPressed:
-                            (tipoAlertaSeleccionada.isEmpty || !botonHabilitado)
-                                ? null
-                                : enviarAlerta,
+                        onPressed: (tipoAlertaSeleccionada.isEmpty ||
+                                !botonHabilitado ||
+                                alertasBloqueadas
+                                    .contains(tipoAlertaSeleccionada))
+                            ? null
+                            : enviarAlerta,
                         child: Text(
                           botonHabilitado ? "ENVIAR ALERTA" : "ESPERE...",
                           style: const TextStyle(
