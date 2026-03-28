@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'config/firebase_options.dart';
-import 'screens/vista_entidad_screen.dart';
 import 'screens/inicio_page.dart';
+import 'screens/registro_page.dart';
 
 // Borramos los duplicados que estaban aquí
 void main() async {
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
       ),
 
       // Volvemos a la configuración simple: entra directo a tus botones
-      home: const InicioPage(),
+      home: const RegistroPage(),
     );
   }
 }

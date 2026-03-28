@@ -82,11 +82,12 @@ class _MapaAlertasScreenState extends State<MapaAlertasScreen> {
         // Escuchamos la colección 'reclamos'
         stream: FirebaseFirestore.instance.collection('reclamos').snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return const Center(child: Text("Error al conectar"));
-          if (!snapshot.hasData)
-            return const Center(child: CircularProgressIndicator());
-
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: Text("Cargando..."));
+          }
           _marcadores.clear(); // Limpiamos para no duplicar
 
           for (var doc in snapshot.data!.docs) {
