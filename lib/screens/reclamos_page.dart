@@ -1,11 +1,13 @@
 import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
+
 import '../widgets_personalizados.dart';
 import 'servicios_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:vibration/vibration.dart';
 
 class ReclamosPage extends StatefulWidget {
   const ReclamosPage({super.key});
@@ -20,19 +22,30 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String mensajeConfirmacion = "";
   final TextEditingController _detalleController = TextEditingController();
 
-  // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL
+  // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
   Future<void> enviarReclamoAlFirebase(String tipoRecibido) async {
-    String empresaDestino = "";
+    // 1. Usamos una variable dinámica para que acepte un nombre solo o una lista []
+    dynamic empresasDestino;
 
-    // Lógica de destino según el reclamo
+    // 2. Lógica de destinos según tu pedido
     if (tipoRecibido == "pérdida de agua") {
-      empresaDestino = "aguas de la rioja";
+      empresasDestino = "aguas de la rioja";
     } else if (tipoRecibido == "cable caído") {
-      empresaDestino = "edelar";
+      empresasDestino = ["edelar", "protección ciudadana"];
     } else if (tipoRecibido == "pérdida de gas") {
-      empresaDestino = "ecogas";
+      empresasDestino = [
+        "bomberos más cercanos",
+        "sala de comunicaciones",
+        "protección ciudadana"
+      ];
     } else if (tipoRecibido == "daños en vía pública") {
-      empresaDestino = "municipio"; // <--- Destino para el nuevo botón
+      empresasDestino = [
+        "sala de comunicaciones",
+        "protección ciudadana",
+        "bomberos"
+      ];
+    } else {
+      empresasDestino = "comisaria cercana"; // Destino por defecto
     }
 
     if (tipoRecibido.isEmpty) {
@@ -55,10 +68,15 @@ class _ReclamosPageState extends State<ReclamosPage> {
         'nombre_vecino': 'Diego',
         'telefono': '3804521058',
         'fecha': FieldValue.serverTimestamp(),
+
+        // 1. Esto está perfecto, aseguralo así:
         'ubicacion': GeoPoint(position.latitude, position.longitude),
+
+        // 2. Aquí estaba el error (faltaba el $ y sobraba un 0):
         'link_mapa':
             "https://www.google.com/maps?q=${position.latitude},${position.longitude}",
-        'empresa_destino': empresaDestino,
+
+        'empresa_destino': empresasDestino,
         'detalle': _detalleController.text.trim(),
       });
       _detalleController.clear();
@@ -112,23 +130,26 @@ class _ReclamosPageState extends State<ReclamosPage> {
   }
 
   void alPresionarBoton(String tipo) {
+    _detalleController.clear();
     _mostrarCuadroDetalle(context);
     if (reclamosBloqueados[tipo] == true) return;
     setState(() => reclamoSeleccionado = tipo);
 
     _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 15), () {
+    _timer = Timer(const Duration(seconds: 30), () {
+      // boton de reclamos dura este tiempo marcado
       if (mounted) setState(() => reclamoSeleccionado = "");
     });
   }
 
   void enviarReclamoFinal() async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     if (reclamoSeleccionado.isEmpty) return;
     String tipoEnviado = reclamoSeleccionado;
 
     await enviarReclamoAlFirebase(tipoEnviado);
 
-    if (await Vibration.hasVibrator() ?? false) {
+    if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(duration: 500);
     }
 
@@ -141,10 +162,12 @@ class _ReclamosPageState extends State<ReclamosPage> {
     await _guardarBloqueo(tipoEnviado);
 
     Timer(const Duration(seconds: 10), () {
+      // duracion del cartel verde de arriba
       if (mounted) setState(() => mensajeConfirmacion = "");
     });
 
     Timer(const Duration(minutes: 2), () {
+      // bloqueo de un boton de reclamo enviada
       if (mounted) {
         setState(() {
           reclamosBloqueados[tipoEnviado] = false;
@@ -371,6 +394,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text("Detalle del Reclamo",
+              textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: SizedBox(
@@ -383,6 +407,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
                   const SizedBox(height: 15),
                   TextField(
                     controller: _detalleController,
+                    textAlign: TextAlign.center,
                     maxLength: 50,
                     decoration: InputDecoration(
                       hintText: "Ej: Frente al portón blanco",
@@ -399,41 +424,66 @@ class _ReclamosPageState extends State<ReclamosPage> {
             ),
           ),
           actions: [
-            Center(
-              child: TextButton(
-                onPressed: () {
-                  // 1. Cerramos la ventanita
-                  Navigator.pop(context);
-
-                  // 2. Mostramos el cartelito verde por 20 segundos
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        "✅ Detalle guardado. Ahora presioná ENVIAR RECLAMO.",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
+            Row(
+              children: [
+                // BOTÓN CANCELAR
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      _detalleController.clear();
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      "CANCELAR",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14, // IGUALADO
                       ),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(
-                          seconds: 10), // 👈 Los 20 seg que pediste
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      // Sin acción/botón de cerrar como pediste
                     ),
-                  );
-                },
-                child: const Text(
-                  "GUARDAR",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
                   ),
                 ),
-              ),
+                // BOTÓN GUARDAR
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      // 1. Refresca la pantalla principal para que los botones cambien a gris
+                      setState(() {});
+
+                      // 2. Cierra el cuadro de diálogo
+                      Navigator.pop(context);
+
+                      // 3. Muestra el mensaje de éxito
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            "✅ Detalle guardado. Ahora presioná ENVIAR RECLAMO.",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14),
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(
+                              seconds:
+                                  31), // el cartel datall... dura este tiempo
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      "GUARDAR",
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14, // IGUALADO
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         );
