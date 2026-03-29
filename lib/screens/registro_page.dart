@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
-
-final List<String> barriosRioja = ["Los Caudillos", "Centro"];
+import 'validacion_page.dart';
 
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key});
@@ -13,12 +12,12 @@ class RegistroPage extends StatefulWidget {
 }
 
 class _RegistroPageState extends State<RegistroPage> {
-  // Función para obtener el ID real del teléfono (Pegala acá)
+  // Función para obtener el ID real del teléfono
   Future<String> _obtenerIdReal() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      return androidInfo.id; // El ID único de Android
+      return androidInfo.id;
     } else if (Platform.isIOS) {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
       return iosInfo.identifierForVendor ?? "desconocido_ios";
@@ -26,30 +25,15 @@ class _RegistroPageState extends State<RegistroPage> {
     return "desconocido";
   }
 
-  // Controladores para capturar lo que escribe el vecino
+  // Controladores
   final _nombreController = TextEditingController();
   final _dniController = TextEditingController();
   final _domicilioController = TextEditingController();
   final _emailController = TextEditingController();
   final _celularController = TextEditingController();
-  Future<void> cargarTodosLosBarrios() async {
-    final coleccion = FirebaseFirestore.instance.collection('barrios');
-
-    // Lista prolija con los nombres que querés
-    List<String> misBarrios = ["Centro", "Los Caudillos"];
-
-    for (String nombre in misBarrios) {
-      await coleccion.doc(nombre).set({
-        'nombre': nombre,
-        'activo': true,
-        'radioMetros': 100,
-      });
-    }
-  }
 
   final _formKey = GlobalKey<FormState>();
   String? barrioSeleccionado;
-  // Controladores para los otros datos
 
   @override
   Widget build(BuildContext context) {
@@ -60,10 +44,8 @@ class _RegistroPageState extends State<RegistroPage> {
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            // <--- Este es el "mago" que quita la línea amarilla
             child: Column(
               children: [
-                // 1. NOMBRE
                 TextFormField(
                   controller: _nombreController,
                   decoration: const InputDecoration(
@@ -71,8 +53,6 @@ class _RegistroPageState extends State<RegistroPage> {
                       prefixIcon: Icon(Icons.person)),
                 ),
                 const SizedBox(height: 15),
-
-                // 2. DNI
                 TextFormField(
                   controller: _dniController,
                   decoration: const InputDecoration(
@@ -81,16 +61,12 @@ class _RegistroPageState extends State<RegistroPage> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 15),
-
-                // 3. DOMICILIO
                 TextFormField(
                   controller: _domicilioController,
                   decoration: const InputDecoration(
                       labelText: "Domicilio", prefixIcon: Icon(Icons.home)),
                 ),
                 const SizedBox(height: 15),
-
-                // 4. EMAIL
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -98,8 +74,6 @@ class _RegistroPageState extends State<RegistroPage> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 15),
-
-                // 5. CELULAR
                 TextFormField(
                   controller: _celularController,
                   decoration: const InputDecoration(
@@ -109,7 +83,7 @@ class _RegistroPageState extends State<RegistroPage> {
                 ),
                 const SizedBox(height: 20),
 
-                // --- SELECTOR DE BARRIOS ---
+                // SELECTOR DE BARRIOS DESDE FIREBASE
                 StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
                       .collection('barrios')
@@ -134,20 +108,23 @@ class _RegistroPageState extends State<RegistroPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // BOTÓN FINAL ACTUALIZADO
                 ElevatedButton(
                   onPressed: () async {
+                    if (barrioSeleccionado == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Por favor seleccioná un barrio")),
+                      );
+                      return;
+                    }
+
                     final messenger = ScaffoldMessenger.of(context);
 
                     try {
-                      // 1. Buscamos el ID real del celu
                       String idReal = await _obtenerIdReal();
-
                       DateTime hoy = DateTime.now();
-                      DateTime vencimiento =
-                          DateTime(hoy.year, hoy.month, hoy.day + 30, 23, 59);
 
-                      // 2. Guardamos todo en Firebase
+                      // GUARDAMOS EN LA COLECCIÓN "usuarios"
                       await FirebaseFirestore.instance
                           .collection('usuarios')
                           .add({
@@ -158,31 +135,45 @@ class _RegistroPageState extends State<RegistroPage> {
                         'celular': _celularController.text,
                         'barrio': barrioSeleccionado,
                         'fechaRegistro': hoy,
-                        'rol': 3,
-                        'aprobado': false,
-                        'suscripcionActiva': true,
-                        'fechaVencimiento': vencimiento,
+                        'rol': 3, // Vecino
+                        'estado':
+                            'pendiente', // 🟡 Aparecerá amarillo en tu panel
+                        'codigoActivacion': '', // Vacío hasta que vos se lo des
                         'deviceId': idReal,
                       });
 
                       messenger.showSnackBar(
                         const SnackBar(
-                          content:
-                              Text('✅ Registro enviado. Aguarde aprobación.'),
+                          content: Text(
+                              '✅ Registro enviado. Aguarde 48hs por su código.'),
                           backgroundColor: Colors.green,
                         ),
                       );
 
-                      // 3. Limpiamos los campos
+                      // Limpiamos todo
                       _nombreController.clear();
                       _dniController.clear();
                       _domicilioController.clear();
                       _emailController.clear();
                       _celularController.clear();
+                      setState(() {
+                        barrioSeleccionado = null;
+                      });
+
+                      // --- ESTO TIENE QUE QUEDAR ASÍ ---
+                      await Future.delayed(const Duration(seconds: 2));
+
+                      if (mounted) {
+                        Navigator.pushReplacement(
+                          this.context,
+                          MaterialPageRoute(
+                              builder: (context) => const ValidacionPage()),
+                        );
+                      }
                     } catch (e) {
                       messenger.showSnackBar(
                         const SnackBar(
-                          content: Text('❌ Error al guardar datos'),
+                          content: Text('❌ Error al enviar registro'),
                           backgroundColor: Colors.red,
                         ),
                       );
