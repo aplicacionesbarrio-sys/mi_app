@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({super.key});
@@ -125,57 +127,122 @@ class _ServiciosPageState extends State<ServiciosPage> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     try {
-      // 🛡️ LA SOLUCIÓN DEFINITIVA DE TU AMIGO:
-      // No agarramos el primero que venga, esperamos al primero que NO sea null.
+      // 🛡️ Esperamos al usuario de Auth
       User? user = await FirebaseAuth.instance
           .authStateChanges()
           .firstWhere((u) => u != null)
           .timeout(const Duration(seconds: 5), onTimeout: () => null);
 
-      // --- RASTREO DE USUARIO ---
       if (user == null) {
-        debugPrint("DEBUG: ⚠️ Sigue siendo NULL tras 5 segundos de espera.");
+        debugPrint("DEBUG: ⚠️ Auth sigue siendo NULL.");
       } else {
-        debugPrint("DEBUG: ✅ USUARIO REAL DETECTADO: ${user.uid}");
+        debugPrint("DEBUG: ✅ USUARIO AUTH DETECTADO: ${user.uid}");
       }
 
-      if (user != null) {
-        debugPrint("DEBUG: Accediendo a Firestore para el Plan A...");
+      // --- 🚀 PLAN A: Firebase (Nube) ---
+      debugPrint("DEBUG: 🔍 Obteniendo ID del dispositivo...");
+      String deviceIdOriginal = await _getDeviceId();
+      String deviceIdLimpio = deviceIdOriginal;
 
-        // --- 🚀 PLAN A: Firebase (Nube) ---
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+      // 🧠 EL IMÁN PARA EL ID (Solución de tu primo):
+      final match = RegExp(r'(STAS[\w\.\-]+)').firstMatch(deviceIdOriginal);
+      if (match != null) {
+        deviceIdLimpio = match.group(0)!;
+      }
+
+      deviceIdLimpio = deviceIdLimpio.trim().toUpperCase();
+
+      debugPrint("DEBUG: 📱 ID ORIGINAL: [$deviceIdOriginal]");
+      debugPrint("DEBUG: 📱 ID LIMPIO: [$deviceIdLimpio]");
+
+      debugPrint("DEBUG: 🔎 Buscando en Firestore...");
+      var query = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .where('deviceId', isEqualTo: deviceIdLimpio)
+          .limit(1)
+          .get();
+
+      debugPrint("DEBUG: 📊 Documentos encontrados: ${query.docs.length}");
+
+      if (query.docs.isNotEmpty && mounted) {
+        debugPrint("DEBUG: ✅ Documento encontrado con éxito.");
+        var userDoc = query.docs.first;
+
+        // 📝 RECUPERAMOS LOS DATOS (Incluyendo el TIPO que faltaba)
+        String n = userDoc['nombre'] ?? "Vecino";
+        String t = userDoc['numerodecelular'] ?? "Sin Tel";
+        String tipoServicio =
+            userDoc['tipo'] ?? ""; // <--- AQUÍ RECUPERAMOS EL TIPO
+
+        // Guardamos todo en memoria local para que no se pierda
+        await prefs.setString('nombre_local', n);
+        await prefs.setString('tel_local', t);
+        await prefs.setString('tipo_local', tipoServicio);
+
+        setState(() {
+          nombreVecinoReal = n;
+          telefonoVecinoReal = t;
+          // Si tenés una variable tipoServicioReal en el estado, la actualizamos:
+          // tipoServicioReal = tipoServicio;
+        });
+
+        debugPrint(
+            "DEBUG: 📦 Datos cargados -> Nombre: $n, Tipo: $tipoServicio");
+        return;
+      } else {
+        debugPrint("DEBUG: ❌ No hubo coincidencia con [$deviceIdLimpio]");
+      }
+
+      // --- 🔄 BÚSQUEDA SECUNDARIA (Por UID si falla el DeviceID) ---
+      if (user != null) {
+        DocumentSnapshot userDocUid = await FirebaseFirestore.instance
             .collection('usuarios')
             .doc(user.uid)
             .get();
 
-        if (userDoc.exists && mounted) {
-          String n = userDoc['nombre'] ?? "Vecino";
-          String t = userDoc['numerodecelular'] ?? "Sin Tel";
-
-          debugPrint("DEBUG: 📦 Plan A EXITOSO. Nombre: $n, Tel: $t");
+        if (userDocUid.exists && mounted) {
+          String n = userDocUid['nombre'] ?? "Vecino";
+          String t = userDocUid['numerodecelular'] ?? "Sin Tel";
+          String tipoServicio = userDocUid['tipo'] ?? "";
 
           await prefs.setString('nombre_local', n);
           await prefs.setString('tel_local', t);
+          await prefs.setString('tipo_local', tipoServicio);
+
           setState(() {
             nombreVecinoReal = n;
             telefonoVecinoReal = t;
           });
-          return; // Salimos con éxito
+          return;
         }
       }
     } catch (e) {
-      debugPrint("DEBUG: 🔥 Error en el proceso: $e");
+      debugPrint("DEBUG: 🔥 Error crítico: $e");
     }
 
-    // --- 💾 PLAN B: Memoria (Si el Plan A no pudo) ---
+    // --- 💾 PLAN B: Memoria (Usa lo último guardado) ---
     String? nLocal = prefs.getString('nombre_local');
     if (nLocal != null && mounted) {
-      debugPrint("DEBUG: 💾 Usando Plan B: $nLocal");
+      debugPrint("DEBUG: 💾 Usando Plan B (Cache): $nLocal");
       setState(() {
         nombreVecinoReal = nLocal;
         telefonoVecinoReal = prefs.getString('tel_local') ?? "Sin Tel";
       });
     }
+  }
+
+// --- HERRAMIENTA PARA EL ID DEL CELULAR ---
+  Future<String> _getDeviceId() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    if (Platform.isAndroid) {
+      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+      // Esto genera el código que vimos en la terminal (modelo + id)
+      return androidInfo.model + androidInfo.id;
+    } else if (Platform.isIOS) {
+      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+      return iosInfo.identifierForVendor ?? "unknown_ios";
+    }
+    return "unknown_platform";
   }
 
   Future<void> _cargarEstadoBloqueos() async {

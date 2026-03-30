@@ -6,6 +6,7 @@ import 'package:vibration/vibration.dart';
 import '../widgets_personalizados.dart';
 import 'reclamos_page.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:mi_app/screens/admin_servicios_page.dart';
 
 class InicioPage extends StatefulWidget {
   const InicioPage({super.key});
@@ -276,7 +277,12 @@ class _InicioPageState extends State<InicioPage> {
                               borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: () {
-                          Navigator.pushNamed(context, '/servicios_page');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const AdminServiciosPage()),
+                          );
                         },
                       ),
                     ),
