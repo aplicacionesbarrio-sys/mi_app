@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ServiciosPage extends StatefulWidget {
   const ServiciosPage({super.key});
@@ -20,6 +21,9 @@ class _ServiciosPageState extends State<ServiciosPage> {
   String cartelConfirmacion = "";
   Timer? timerDesmarcar;
   Map<String, bool> serviciosBloqueados = {};
+  String nombreVecinoReal = "Cargando...";
+  String telefonoVecinoReal = "...";
+  String domicilioVecinoReal = "...";
 
   // --- SECCIÓN: LISTADO DE OFICIOS (Tu Tablero de Control) ---
   final List<Map<String, dynamic>> misOficios = [
@@ -109,6 +113,69 @@ class _ServiciosPageState extends State<ServiciosPage> {
   void initState() {
     super.initState();
     _cargarEstadoBloqueos();
+
+    // Esperamos a que Auth esté listo antes de llamar a la función
+    FirebaseAuth.instance.authStateChanges().first.then((_) {
+      if (mounted) obtenerDatosUsuario();
+    });
+  }
+
+  Future<void> obtenerDatosUsuario() async {
+    debugPrint("DEBUG: Iniciando Escudo A y B...");
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    try {
+      // 🛡️ LA SOLUCIÓN DEFINITIVA DE TU AMIGO:
+      // No agarramos el primero que venga, esperamos al primero que NO sea null.
+      User? user = await FirebaseAuth.instance
+          .authStateChanges()
+          .firstWhere((u) => u != null)
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+
+      // --- RASTREO DE USUARIO ---
+      if (user == null) {
+        debugPrint("DEBUG: ⚠️ Sigue siendo NULL tras 5 segundos de espera.");
+      } else {
+        debugPrint("DEBUG: ✅ USUARIO REAL DETECTADO: ${user.uid}");
+      }
+
+      if (user != null) {
+        debugPrint("DEBUG: Accediendo a Firestore para el Plan A...");
+
+        // --- 🚀 PLAN A: Firebase (Nube) ---
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists && mounted) {
+          String n = userDoc['nombre'] ?? "Vecino";
+          String t = userDoc['numerodecelular'] ?? "Sin Tel";
+
+          debugPrint("DEBUG: 📦 Plan A EXITOSO. Nombre: $n, Tel: $t");
+
+          await prefs.setString('nombre_local', n);
+          await prefs.setString('tel_local', t);
+          setState(() {
+            nombreVecinoReal = n;
+            telefonoVecinoReal = t;
+          });
+          return; // Salimos con éxito
+        }
+      }
+    } catch (e) {
+      debugPrint("DEBUG: 🔥 Error en el proceso: $e");
+    }
+
+    // --- 💾 PLAN B: Memoria (Si el Plan A no pudo) ---
+    String? nLocal = prefs.getString('nombre_local');
+    if (nLocal != null && mounted) {
+      debugPrint("DEBUG: 💾 Usando Plan B: $nLocal");
+      setState(() {
+        nombreVecinoReal = nLocal;
+        telefonoVecinoReal = prefs.getString('tel_local') ?? "Sin Tel";
+      });
+    }
   }
 
   Future<void> _cargarEstadoBloqueos() async {
@@ -132,33 +199,68 @@ class _ServiciosPageState extends State<ServiciosPage> {
     });
   }
 
-  void enviarPedido() async {
-    if (servicioSeleccionado.isEmpty || enviando) return;
+  void _mostrarPlanCManual() {
+    TextEditingController nombreCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Identificación Necesaria"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("No pudimos recuperar tu nombre automáticamente."),
+            const SizedBox(height: 10),
+            TextField(
+              controller: nombreCtrl,
+              decoration:
+                  const InputDecoration(hintText: "Tu Nombre y Apellido"),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              if (nombreCtrl.text.trim().isNotEmpty) {
+                setState(() {
+                  nombreVecinoReal = nombreCtrl.text.trim();
+                });
+                Navigator.pop(context);
+                enviarPedido(); // Reintenta enviar con el nombre manual
+              }
+            },
+            child: const Text("CONFIRMAR Y ENVIAR"),
+          ),
+        ],
+      ),
+    );
+  }
 
+  void enviarPedido() async {
+    if (nombreVecinoReal == "..." || nombreVecinoReal == "Cargando...") {
+      _mostrarPlanCManual();
+      return;
+    }
+    if (servicioSeleccionado.isEmpty || enviando) return;
     setState(() {
       enviando = true;
       cartelConfirmacion = "Solicitud de $servicioSeleccionado enviada";
     });
-
     try {
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
-
       // 1. Hace vibrar el celu
       if (await Vibration.hasVibrator()) {
         Vibration.vibrate(duration: 500);
       }
-
       // 2. Envío a Firebase (Ahora sí va a reconocer 'position')
       await FirebaseFirestore.instance.collection('servicios').add({
         'tipo': servicioSeleccionado,
-        'nombre_vecino': 'Diego',
-        'telefono': '3804521058',
+        'nombre': nombreVecinoReal, // Usamos la misma variable que en Inicio
+        'numerodecelular': telefonoVecinoReal, // Usamos la misma que en Inicio
         'fecha': FieldValue.serverTimestamp(),
         'ubicacion': GeoPoint(position.latitude, position.longitude),
-        'link_mapa':
-            'https://www.google.com/maps?q=${position.latitude},${position.longitude}',
-        'encargado': 'admin de servicios',
+        'estado': 'pendiente',
       });
 
       setState(() {
@@ -313,7 +415,9 @@ class _ServiciosPageState extends State<ServiciosPage> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15)),
                     ),
-                    onPressed: servicioSeleccionado.isEmpty || enviando
+                    onPressed: servicioSeleccionado.isEmpty ||
+                            enviando ||
+                            nombreVecinoReal == "..."
                         ? null
                         : enviarPedido,
                     child: Text(enviando ? "ENVIANDO..." : "ENVIAR PEDIDO",

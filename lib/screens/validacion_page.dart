@@ -1,9 +1,9 @@
+// ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart'; // <--- Nuevo
 import 'dart:io'; // <--- Nuevo
 import 'inicio_page.dart';
-import 'dart:developer' as dev;
 
 class ValidacionPage extends StatefulWidget {
   const ValidacionPage({super.key});
@@ -18,48 +18,39 @@ class _ValidacionPageState extends State<ValidacionPage> {
 
   Future<void> _verificarCodigo() async {
     String codigo = _codigoController.text.trim();
-    if (codigo.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Ingresá los 6 dígitos")),
-      );
-      return;
-    }
+    if (codigo.length < 6) return;
 
     setState(() => _cargando = true);
 
     try {
-      // --- PASO NUEVO: Obtener el ID de este teléfono ---
       String idActual = "";
       var deviceInfo = DeviceInfoPlugin();
+
+      // --- ESTO TE VA A MOSTRAR EL ID EN LA TERMINAL ---
       if (Platform.isAndroid) {
         var build = await deviceInfo.androidInfo;
-        idActual = build.id; // Este es el ID que comparamos
+        idActual = build.id;
+        print("-----------------------------------------");
+        print("EL ID DE TU CELULAR ES: $idActual");
+        print("-----------------------------------------");
+        print("EL CÓDIGO QUE ESCRIBISTE ES: $codigo");
       }
 
-      // --- PASO ACTUALIZADO: Buscamos con código Y con deviceId ---
+      // Buscamos en Firebase
       final snapshot = await FirebaseFirestore.instance
           .collection('codigos_activacion')
           .where('codigo', isEqualTo: codigo)
-          .where('deviceId', isEqualTo: idActual) // <--- Seguridad extra
+          .where('deviceId', isEqualTo: idActual)
           .where('usado', isEqualTo: false)
           .get();
 
       if (!mounted) return;
 
       if (snapshot.docs.isNotEmpty) {
-        // 1. Quemamos el código de activación
+        // Si el código es correcto, lo marcamos como usado
         await snapshot.docs.first.reference.update({'usado': true});
 
-        // 2. Buscamos al usuario para ponerlo "activo"
-        final userSnapshot = await FirebaseFirestore.instance
-            .collection('usuarios')
-            .where('deviceId', isEqualTo: idActual)
-            .get();
-
-        if (userSnapshot.docs.isNotEmpty) {
-          await userSnapshot.docs.first.reference.update({'estado': 'activo'});
-        }
-
+        // Pasamos a la pantalla de Inicio
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -67,13 +58,11 @@ class _ValidacionPageState extends State<ValidacionPage> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  "Código inválido, usado o no autorizado para este equipo")),
+          const SnackBar(content: Text("Código o Dispositivo incorrecto")),
         );
       }
     } catch (e) {
-      dev.log("Error al verificar: $e");
+      print("Error de Firebase: $e");
     }
 
     if (mounted) setState(() => _cargando = false);

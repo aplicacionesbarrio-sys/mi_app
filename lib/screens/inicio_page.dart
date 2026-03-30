@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:vibration/vibration.dart';
 import '../widgets_personalizados.dart';
 import 'reclamos_page.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class InicioPage extends StatefulWidget {
   const InicioPage({super.key});
@@ -24,20 +25,64 @@ class _InicioPageState extends State<InicioPage> {
   bool botonHabilitado = true;
   bool mostrarAvisoLlamada = false;
   List<String> alertasBloqueadas = [];
+  String nombreVecinoReal = "Cargando...";
+  String telefonoVecinoReal = "...";
+  int rolUsuario = 3; // Nivel de acceso (3 por defecto es vecino)
 
   @override
   void initState() {
     super.initState();
-    obtenerUbicacion();
+    obtenerUbicacionActual(); // <--- Le agregamos "Actual" al final
+    obtenerDatosUsuario(); // ESTO NO SE TOCA, es tu configuración de ID
   }
 
-  Future<void> obtenerUbicacion() async {
-    Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-    setState(() {
-      lat = position.latitude;
-      lng = position.longitude;
-    });
+  // --- TU FUNCIÓN ACTUAL (NO SE TOCA) ---
+  Future<void> obtenerDatosUsuario() async {
+    var build = await DeviceInfoPlugin().androidInfo;
+    String idCelu = build.id;
+
+    var usuarioQuery = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .where('deviceId', isEqualTo: idCelu)
+        .get();
+
+    if (usuarioQuery.docs.isNotEmpty) {
+      // 1. Leemos los datos una sola vez
+      final datos = usuarioQuery.docs.first.data();
+
+      setState(() {
+        nombreVecinoReal = datos['nombre'] ?? "Sin Nombre";
+        telefonoVecinoReal = datos['numerodecelular'] ?? "Sin Telefono";
+        rolUsuario = datos['rol'] ?? 3;
+        debugPrint("🛡️ NIVEL DE ACCESO DETECTADO: $rolUsuario");
+      });
+      debugPrint("👑 Mi nivel de acceso actual es: $rolUsuario");
+    } else {
+      debugPrint("⚠️ No se encontró ningún usuario con este ID en Firebase");
+    }
+  }
+
+  // --- FUNCIÓN NUEVA: PARA EL GPS (AGREGALA ACÁ) ---
+  Future<void> obtenerUbicacionActual() async {
+    try {
+      // 1. Pedimos permiso al celular (Esto abre el cartelito)
+      LocationPermission permission = await Geolocator.requestPermission();
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        // 2. Si nos dio permiso, buscamos la latitud y longitud
+        Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high);
+
+        setState(() {
+          lat = position.latitude;
+          lng = position.longitude;
+        });
+        debugPrint("📍 Ubicación lista: $lat, $lng");
+      }
+    } catch (e) {
+      debugPrint("⚠️ El GPS no respondió: $e");
+    }
   }
 
   void enviarAlerta() async {
@@ -81,12 +126,14 @@ class _InicioPageState extends State<InicioPage> {
     if (await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 500);
     }
-
+    if (telefonoVecinoReal == "...") {
+      await obtenerDatosUsuario();
+    }
     // Guardado en Firebase
     FirebaseFirestore.instance.collection('alertas').add({
       'tipo': alertaMandada,
-      'nombre_vecino': 'Diego',
-      'telefono': '3804521058',
+      'nombre_vecino': nombreVecinoReal,
+      'numerodecelular': telefonoVecinoReal,
       'fecha': FieldValue.serverTimestamp(),
       'ubicacion': GeoPoint(lat, lng),
       'link_mapa': 'https://www.google.com/maps?q=$lat,$lng',
@@ -208,7 +255,31 @@ class _InicioPageState extends State<InicioPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(
+                      height:
+                          30), // aqui cambie la distancia del boton era de 30
+                  // BOTÓN EXCLUSIVO PARA ADMIN DE SERVICIOS (Nivel 2)
+                  if (rolUsuario <= 2)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.assignment_turned_in,
+                            color: Colors.white),
+                        label: const Text("VER PEDIDOS DE SERVICIOS",
+                            style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Colors.orange, // Color Naranja para diferenciarlo
+                          padding: const EdgeInsets.symmetric(vertical: 0),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/servicios_page');
+                        },
+                      ),
+                    ),
                   if (!botonHabilitado)
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -249,7 +320,9 @@ class _InicioPageState extends State<InicioPage> {
                         onPressed: (tipoAlertaSeleccionada.isEmpty ||
                                 !botonHabilitado ||
                                 alertasBloqueadas
-                                    .contains(tipoAlertaSeleccionada))
+                                    .contains(tipoAlertaSeleccionada) ||
+                                nombreVecinoReal ==
+                                    "Cargando...") // <--- AGREGAMOS ESTA LÍNEA
                             ? null
                             : enviarAlerta,
                         child: Text(
