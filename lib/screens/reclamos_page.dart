@@ -20,6 +20,8 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String reclamoSeleccionado = "";
   Timer? _timer;
   String mensajeConfirmacion = "";
+  String nombreVecinoReal = "Cargando...";
+  String telefonoVecinoReal = "Cargando...";
   final TextEditingController _detalleController = TextEditingController();
 
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
@@ -63,21 +65,21 @@ class _ReclamosPageState extends State<ReclamosPage> {
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
+      // 2. Envío a Firebase (Copiando la estructura de Servicios que ya funciona)
       await FirebaseFirestore.instance.collection('reclamos').add({
         'tipo': tipoRecibido,
-        'nombre_vecino': 'Diego',
-        'telefono': '3804521058',
+        'nombre': nombreVecinoReal, // <--- 'nombre' como en servicios
+        'numerodecelular':
+            telefonoVecinoReal, // <--- 'numerodecelular' como en servicios
         'fecha': FieldValue.serverTimestamp(),
-
-        // 1. Esto está perfecto, aseguralo así:
         'ubicacion': GeoPoint(position.latitude, position.longitude),
+        'estado': 'pendiente',
 
-        // 2. Aquí estaba el error (faltaba el $ y sobraba un 0):
-        'link_mapa':
-            "https://www.google.com/maps?q=${position.latitude},${position.longitude}",
-
+        // Datos extra exclusivos de Reclamos
         'empresa_destino': empresasDestino,
         'detalle': _detalleController.text.trim(),
+        'link_mapa':
+            "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}",
       });
       _detalleController.clear();
     } catch (e) {
@@ -97,6 +99,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
   void initState() {
     super.initState();
     _cargarEstadoBloqueos();
+    _obtenerDatosUsuario(); // <--- Esta es la orden nueva
   }
 
   Future<void> _cargarEstadoBloqueos() async {
@@ -124,6 +127,23 @@ class _ReclamosPageState extends State<ReclamosPage> {
     });
   }
 
+  Future<void> _obtenerDatosUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String nombreLeido = prefs.getString('nombre') ?? "";
+    String celularLeido = prefs.getString('numerodecelular') ?? "";
+
+    if (!mounted) return;
+
+    setState(() {
+      nombreVecinoReal = nombreLeido.isNotEmpty ? nombreLeido : "Vecino";
+      telefonoVecinoReal =
+          celularLeido.isNotEmpty ? celularLeido : "Sin número";
+    });
+
+    debugPrint("📖 DATOS CARGADOS: $nombreVecinoReal - $telefonoVecinoReal");
+  }
+
   Future<void> _guardarBloqueo(String tipo) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString("fecha_$tipo", DateTime.now().toIso8601String());
@@ -144,6 +164,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
 
   void enviarReclamoFinal() async {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    await _obtenerDatosUsuario();
     if (reclamoSeleccionado.isEmpty) return;
     String tipoEnviado = reclamoSeleccionado;
 

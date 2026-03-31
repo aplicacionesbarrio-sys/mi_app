@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 import 'validacion_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key});
@@ -110,6 +111,7 @@ class _RegistroPageState extends State<RegistroPage> {
 
                 ElevatedButton(
                   onPressed: () async {
+                    // 1. Validación inicial
                     if (barrioSeleccionado == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -120,25 +122,35 @@ class _RegistroPageState extends State<RegistroPage> {
 
                     final messenger = ScaffoldMessenger.of(context);
 
+                    // 2. Persistencia local (SharedPreferences)
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString(
+                        'nombre', _nombreController.text.trim());
+                    await prefs.setString(
+                        'numerodecelular', _celularController.text.trim());
+
+                    debugPrint(
+                        "✅ Memoria local actualizada: ${_nombreController.text}");
+
                     try {
                       String idReal = await _obtenerIdReal();
                       DateTime hoy = DateTime.now();
 
-                      // GUARDAMOS EN LA COLECCIÓN "usuarios"
+                      // 3. Envío a Firebase
                       await FirebaseFirestore.instance
                           .collection('usuarios')
                           .add({
-                        'nombre': _nombreController.text,
-                        'dni': _dniController.text,
-                        'domicilio': _domicilioController.text,
-                        'email': _emailController.text,
-                        'celular': _celularController.text,
+                        'nombre': _nombreController.text.trim(),
+                        'dni': _dniController.text.trim(),
+                        'domicilio': _domicilioController.text.trim(),
+                        'email': _emailController.text.trim(),
+                        'numerodecelular':
+                            _celularController.text.trim(), // ✅ CAMBIO ACÁ
                         'barrio': barrioSeleccionado,
                         'fechaRegistro': hoy,
-                        'rol': 3, // Vecino
-                        'estado':
-                            'pendiente', // 🟡 Aparecerá amarillo en tu panel
-                        'codigoActivacion': '', // Vacío hasta que vos se lo des
+                        'rol': 3,
+                        'estado': 'pendiente',
+                        'codigoActivacion': '',
                         'deviceId': idReal,
                       });
 
@@ -150,30 +162,30 @@ class _RegistroPageState extends State<RegistroPage> {
                         ),
                       );
 
-                      // Limpiamos todo
+                      // 4. LIMPIEZA DE CUADROS DE TEXTO
                       _nombreController.clear();
                       _dniController.clear();
                       _domicilioController.clear();
                       _emailController.clear();
                       _celularController.clear();
+
                       setState(() {
                         barrioSeleccionado = null;
                       });
 
-                      // --- ESTO TIENE QUE QUEDAR ASÍ ---
+                      // 5. Navegación
                       await Future.delayed(const Duration(seconds: 2));
-
                       if (mounted) {
                         Navigator.pushReplacement(
-                          this.context,
+                          context,
                           MaterialPageRoute(
                               builder: (context) => const ValidacionPage()),
                         );
                       }
                     } catch (e) {
                       messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('❌ Error al enviar registro'),
+                        SnackBar(
+                          content: Text('❌ Error al enviar registro: $e'),
                           backgroundColor: Colors.red,
                         ),
                       );

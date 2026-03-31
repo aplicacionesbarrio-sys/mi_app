@@ -168,16 +168,14 @@ class _ServiciosPageState extends State<ServiciosPage> {
         debugPrint("DEBUG: ✅ Documento encontrado con éxito.");
         var userDoc = query.docs.first;
 
-        // 📝 RECUPERAMOS LOS DATOS (Incluyendo el TIPO que faltaba)
+        // 📝 RECUPERAMOS LOS DATOS (incluyendo el ROL del usuario)
         String n = userDoc['nombre'] ?? "Vecino";
         String t = userDoc['numerodecelular'] ?? "Sin Tel";
-        String tipoServicio =
-            userDoc['tipo'] ?? ""; // <--- AQUÍ RECUPERAMOS EL TIPO
+        int rolUsuario = userDoc['rol'] ?? 3; // <--- AQUÍ RECUPERAMOS EL TIPO
 
         // Guardamos todo en memoria local para que no se pierda
         await prefs.setString('nombre_local', n);
         await prefs.setString('tel_local', t);
-        await prefs.setString('tipo_local', tipoServicio);
 
         setState(() {
           nombreVecinoReal = n;
@@ -186,8 +184,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
           // tipoServicioReal = tipoServicio;
         });
 
-        debugPrint(
-            "DEBUG: 📦 Datos cargados -> Nombre: $n, Tipo: $tipoServicio");
+        debugPrint("DEBUG: 📦 Datos cargados -> Nombre: $n, Rol: $rolUsuario");
         return;
       } else {
         debugPrint("DEBUG: ❌ No hubo coincidencia con [$deviceIdLimpio]");
@@ -203,11 +200,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
         if (userDocUid.exists && mounted) {
           String n = userDocUid['nombre'] ?? "Vecino";
           String t = userDocUid['numerodecelular'] ?? "Sin Tel";
-          String tipoServicio = userDocUid['tipo'] ?? "";
+          int rolUsuario = userDocUid['rol'] ?? 3;
 
           await prefs.setString('nombre_local', n);
           await prefs.setString('tel_local', t);
-          await prefs.setString('tipo_local', tipoServicio);
 
           setState(() {
             nombreVecinoReal = n;

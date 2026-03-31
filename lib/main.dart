@@ -6,6 +6,7 @@ import 'screens/registro_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'screens/inicio_page.dart'; // Importante para poder saltar a las alertas
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,14 @@ Future<Widget> verificarUsuario() async {
 
   // 3. Decidimos a qué pantalla ir
   if (usuarioQuery.docs.isNotEmpty) {
+    var doc = usuarioQuery.docs.first;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString('nombre', doc['nombre'] ?? "Vecino");
+    await prefs.setString(
+        'numerodecelular', doc['numerodecelular'] ?? "Sin número");
+
     debugPrint("✅ Vecino reconocido, entrando a Inicio.");
     return const InicioPage();
   } else {
