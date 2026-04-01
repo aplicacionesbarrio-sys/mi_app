@@ -5,7 +5,9 @@ import 'config/firebase_options.dart';
 import 'screens/registro_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'screens/inicio_page.dart'; // Importante para poder saltar a las alertas
+import 'screens/inicio_page.dart';
+import 'screens/seguridad_page.dart'; // <--- IMPORTANTE: Nueva página
+import 'screens/admin_servicios_page.dart'; // <--- IMPORTANTE: Nueva página
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
@@ -20,36 +22,47 @@ Future<Widget> verificarUsuario() async {
   var build = await DeviceInfoPlugin().androidInfo;
   String idCelu = build.id;
 
-  // 🔥 PASO NUEVO: Activamos la sesión oficial de Firebase
-  // Esto hace que FirebaseAuth.instance.currentUser DEJE DE SER NULL
   try {
     if (FirebaseAuth.instance.currentUser == null) {
       await FirebaseAuth.instance.signInAnonymously();
-      debugPrint(
-          "✅ Auth: Sesión anónima iniciada para el dispositivo: $idCelu");
+      debugPrint("✅ Auth: Sesión anónima iniciada: $idCelu");
     }
   } catch (e) {
-    debugPrint("❌ Auth: Error al conectar con Firebase Auth: $e");
+    debugPrint("❌ Auth: Error: $e");
   }
 
-  // 2. Buscamos en la colección 'usuarios' si ese ID ya existe
+  // 2. Buscamos en la colección 'usuarios'
   var usuarioQuery = await FirebaseFirestore.instance
       .collection('usuarios')
       .where('deviceId', isEqualTo: idCelu)
       .get();
 
-  // 3. Decidimos a qué pantalla ir
+  // 3. Decidimos a qué pantalla ir según el ROL
   if (usuarioQuery.docs.isNotEmpty) {
     var doc = usuarioQuery.docs.first;
+    var datos = doc.data();
+
+    // Extraemos el rol (si no existe, por defecto es 3)
+    int rol = datos['rol'] ?? 3;
 
     final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setString('nombre', doc['nombre'] ?? "Vecino");
+    await prefs.setString('nombre', datos['nombre'] ?? "Vecino");
     await prefs.setString(
-        'numerodecelular', doc['numerodecelular'] ?? "Sin número");
+        'numerodecelular', datos['numerodecelular'] ?? "Sin número");
 
-    debugPrint("✅ Vecino reconocido, entrando a Inicio.");
-    return const InicioPage();
+    debugPrint("🛡️ ACCESO: Usuario reconocido con ROL: $rol");
+
+    // 🚀 Lógica de redirección profesional
+    if (rol == 2) {
+      debugPrint("🛰️ Entrando como Admin de Servicios");
+      return const AdminServiciosPage();
+    } else if (rol == 4) {
+      debugPrint("🚨 Entrando como Seguridad");
+      return const SeguridadPage();
+    } else {
+      debugPrint("🏠 Entrando como Vecino");
+      return const InicioPage();
+    }
   } else {
     debugPrint("⚠️ Vecino nuevo, enviando a Registro.");
     return const RegistroPage();
@@ -77,18 +90,14 @@ class MyApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       ),
-
-      // Volvemos a la configuración simple: entra directo a la pantalla de validación profesional
       home: FutureBuilder<Widget>(
         future: verificarUsuario(),
         builder: (context, snapshot) {
-          // Mientras busca en Firebase, mostramos un círculo de carga
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          // Cuando ya tiene la respuesta, muestra la pantalla que corresponde
           return snapshot.data ?? const RegistroPage();
         },
       ),
