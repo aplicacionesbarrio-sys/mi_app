@@ -3,8 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 class SeguridadPage extends StatefulWidget {
   const SeguridadPage({super.key});
@@ -19,6 +17,8 @@ class _SeguridadPageState extends State<SeguridadPage> {
   BitmapDescriptor? customIcon;
 
   final String darkMapStyle = '''
+
+
   [
     {"elementType":"geometry","stylers":[{"color":"#1d1d1d"}]},
     {"elementType":"labels.text.fill","stylers":[{"color":"#8ec3b9"}]},
@@ -29,6 +29,18 @@ class _SeguridadPageState extends State<SeguridadPage> {
     {"featureType":"poi","elementType":"geometry","stylers":[{"color":"#1d1d1d"}]}
   ]
   ''';
+// Línea 32: ''';
+// Línea 33: PEGÁ ACÁ EL CÓDIGO:
+
+  void _moverAlIncendio(double lat, double lng) {
+    if (_mapController == null) {
+      debugPrint("⚠️ Controller no inicializado");
+      return;
+    }
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 17),
+    );
+  }
 
   @override
   void initState() {
@@ -149,6 +161,16 @@ class _SeguridadPageState extends State<SeguridadPage> {
                   },
                   onMapCreated: (controller) {
                     _mapController = controller;
+
+                    // fuerza refresco en algunos dispositivos (Moto G22 incluido)
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      if (_mapController != null) {
+                        _mapController!.moveCamera(
+                          CameraUpdate.newLatLng(LatLng(lat, lng)),
+                        );
+                      }
+                    });
+
                     cargarIcono(tipo);
                   },
                   myLocationButtonEnabled: false,
@@ -222,7 +244,7 @@ class _SeguridadPageState extends State<SeguridadPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red[900],
                           ),
-                          onPressed: () => abrirMapa(lat, lng),
+                          onPressed: () => _moverAlIncendio(lat, lng),
                           icon: const Icon(Icons.navigation),
                           label: const Text("NAVEGAR",
                               style: TextStyle(fontSize: 18)),
