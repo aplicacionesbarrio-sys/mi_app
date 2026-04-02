@@ -114,93 +114,95 @@ class _SeguridadPageState extends State<SeguridadPage>
           return Stack(
             children: [
               SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // 🔥 ICONO CENTRAL + TIPO DE ALERTA
-                      Column(
-                        children: [
-                          Image.asset(obtenerImagenAlerta(tipo), height: 160),
-                          const SizedBox(height: 15),
-                          Text(
-                            tipo.toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 38,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // 🔴 TARJETA ROJA (Información del Vecino)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(25),
-                          border: Border.all(color: Colors.white24, width: 1),
-                        ),
-                        child: Column(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // 🔥 ICONO CENTRAL + TIPO DE ALERTA
+                        Column(
                           children: [
-                            ListTile(
-                              leading: const Icon(Icons.person,
-                                  color: Colors.white, size: 30),
-                              title: Text(nombre,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                            // 🏘️ NUEVO: Fila del Barrio
-                            ListTile(
-                              leading: const Icon(Icons.location_city,
-                                  color: Colors.white70),
-                              title: Text(barrio,
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 20)),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.phone,
-                                  color: Colors.greenAccent),
-                              title: Text(celular,
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 22)),
-                              onTap: () => llamar(celular),
+                            Image.asset(obtenerImagenAlerta(tipo), height: 160),
+                            const SizedBox(height: 15),
+                            Text(
+                              tipo.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 38,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
                             ),
                           ],
                         ),
-                      ),
 
-                      // 🚀 BOTÓN NAVEGAR (Súper accesible)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 55,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red[900],
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15)),
-                            elevation: 8,
+                        // 🔴 TARJETA ROJA (Información del Vecino)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(color: Colors.white24, width: 1),
                           ),
-                          onPressed: () {
-                            HapticFeedback
-                                .heavyImpact(); // Vibración más fuerte al tocar
-                            abrirMapa(lat, lng);
-                          },
-                          icon: const Icon(Icons.navigation,
-                              color: Colors.white, size: 30),
-                          label: const Text("NAVEGAR AL LUGAR",
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold)),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.person,
+                                    color: Colors.white, size: 30),
+                                title: Text(nombre,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.bold)),
+                              ),
+                              // 🏘️ NUEVO: Fila del Barrio
+                              ListTile(
+                                leading: const Icon(Icons.location_city,
+                                    color: Colors.white70),
+                                title: Text(barrio,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 20)),
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.phone,
+                                    color: Colors.greenAccent),
+                                title: Text(celular,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 22)),
+                                onTap: () => llamar(celular),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 35),
+                        // 🚀 BOTÓN NAVEGAR (Súper accesible)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 55,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[900],
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15)),
+                              elevation: 8,
+                            ),
+                            onPressed: () {
+                              HapticFeedback
+                                  .heavyImpact(); // Vibración más fuerte al tocar
+                              abrirMapa(lat, lng);
+                            },
+                            icon: const Icon(Icons.navigation,
+                                color: Colors.white, size: 30),
+                            label: const Text("NAVEGAR AL LUGAR",
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

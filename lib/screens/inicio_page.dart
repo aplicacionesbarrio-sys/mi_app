@@ -140,7 +140,10 @@ class _InicioPageState extends State<InicioPage> {
       'ubicacion': GeoPoint(lat, lng),
       'link_mapa': 'https://www.google.com/maps?q=$lat,$lng',
       'destinatarios': paraQuien,
-      'barrio_vecino': barrioReal,
+      'estado': 'activa', // 👈 CLAVE
+      'barrio_vecino': (barrioReal == null || barrioReal.isEmpty)
+          ? "ERROR_DATO_VACIO"
+          : barrioReal,
     });
 
     // TEMPORIZADOR: El cartel verde de arriba desaparece a los 10 segundos
@@ -217,7 +220,7 @@ class _InicioPageState extends State<InicioPage> {
                   const Text("Selecciona tu alerta",
                       style:
                           TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text("Barrio: $barrioReal"),
+
                   const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -287,6 +290,34 @@ class _InicioPageState extends State<InicioPage> {
                                     const AdminServiciosPage()),
                           );
                         },
+                      ),
+                    ),
+
+                  // BOTÓN EXCLUSIVO PARA RECLAMOS (Rol 5)
+                  if (rolUsuario == 5)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReclamosPage(
+                                rolUsuario: rolUsuario, // <-- pasamos el rol
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text("VER RECLAMOS"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
                     ),
                   if (!botonHabilitado)
@@ -400,8 +431,12 @@ class _InicioPageState extends State<InicioPage> {
       estaSeleccionado: false,
       colorFondo: const Color.fromARGB(255, 252, 250, 250),
       accion: () {
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const ReclamosPage()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReclamosPage(rolUsuario: rolUsuario),
+          ),
+        );
       },
     );
   }
