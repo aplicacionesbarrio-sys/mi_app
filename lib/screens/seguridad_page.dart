@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter/services.dart';
 
 class SeguridadPage extends StatefulWidget {
   const SeguridadPage({super.key});
@@ -11,84 +11,45 @@ class SeguridadPage extends StatefulWidget {
   State<SeguridadPage> createState() => _SeguridadPageState();
 }
 
-class _SeguridadPageState extends State<SeguridadPage> {
-  GoogleMapController? _mapController;
-  final Set<Polyline> _polylines = {};
-  BitmapDescriptor? customIcon;
-
-  final String darkMapStyle = '''
-
-
-  [
-    {"elementType":"geometry","stylers":[{"color":"#1d1d1d"}]},
-    {"elementType":"labels.text.fill","stylers":[{"color":"#8ec3b9"}]},
-    {"elementType":"labels.text.stroke","stylers":[{"color":"#1a3646"}]},
-    {"featureType":"road","elementType":"geometry","stylers":[{"color":"#2c2c2c"}]},
-    {"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#8a8a8a"}]},
-    {"featureType":"water","elementType":"geometry","stylers":[{"color":"#000000"}]},
-    {"featureType":"poi","elementType":"geometry","stylers":[{"color":"#1d1d1d"}]}
-  ]
-  ''';
-// Línea 32: ''';
-// Línea 33: PEGÁ ACÁ EL CÓDIGO:
-
-  void _moverAlIncendio(double lat, double lng) {
-    if (_mapController == null) {
-      debugPrint("⚠️ Controller no inicializado");
-      return;
-    }
-    _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 17),
-    );
-  }
-
+class _SeguridadPageState extends State<SeguridadPage>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WakelockPlus.enable();
+    WidgetsBinding.instance.addObserver(this);
+    WakelockPlus.enable(); // Mantiene la pantalla encendida
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     super.dispose();
   }
 
-  // 📞 LLAMAR
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      setState(() {});
+    }
+  }
+
+  // 📞 FUNCIÓN LLAMAR
   Future<void> llamar(String celular) async {
     if (celular.isEmpty) return;
-
     final Uri tel = Uri.parse("tel:$celular");
-
     if (await canLaunchUrl(tel)) {
       await launchUrl(tel);
-    } else {
-      debugPrint("No se pudo abrir llamada");
     }
   }
 
-  // 🗺️ NAVEGAR
+  // 🗺️ FUNCIÓN NAVEGAR (Abre Google Maps externo)
   Future<void> abrirMapa(double lat, double lng) async {
     final Uri uri = Uri.parse("google.navigation:q=$lat,$lng&mode=d");
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      final Uri fallback = Uri.parse(
-          "https://www.google.com/maps/dir/?api=1&destination=$lat,$lng");
-      await launchUrl(fallback, mode: LaunchMode.externalApplication);
-    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  // ICONO
-  Future<void> cargarIcono(String tipo) async {
-    customIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(64, 64)),
-      obtenerImagenAlerta(tipo),
-    );
-    if (mounted) setState(() {});
-  }
-
+  // 🖼️ SELECCIÓN DE IMAGEN SEGÚN TIPO
   String obtenerImagenAlerta(String tipo) {
     switch (tipo.toLowerCase()) {
       case 'robo':
@@ -111,8 +72,14 @@ class _SeguridadPageState extends State<SeguridadPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFB71C1C),
       appBar: AppBar(
-        title: const Text("MONITOR DE EMERGENCIAS",
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text(
+          "MONITOR DE EMERGENCIAS",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 18, // 👈 Ya te la puse más chica como querías
+          ),
+        ),
         backgroundColor: Colors.red[900],
         centerTitle: true,
       ),
@@ -127,7 +94,7 @@ class _SeguridadPageState extends State<SeguridadPage> {
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text("SIN ALERTAS ACTIVAS",
-                  style: TextStyle(color: Colors.white)),
+                  style: TextStyle(color: Colors.white, fontSize: 18)),
             );
           }
 
@@ -137,6 +104,8 @@ class _SeguridadPageState extends State<SeguridadPage> {
           String tipo = alerta['tipo'] ?? 'Alerta';
           String nombre = alerta['nombre_vecino'] ?? 'Vecino';
           String celular = alerta['numerodecelular'] ?? '';
+          // 🏘️ El campo que el ingeniero va a agregar:
+          String barrio = alerta['barrio_vecino'] ?? 'Cargando barrio...';
 
           GeoPoint pos = alerta['ubicacion'];
           double lat = pos.latitude;
@@ -144,110 +113,91 @@ class _SeguridadPageState extends State<SeguridadPage> {
 
           return Stack(
             children: [
-              // 🗺️ MAPA
-              Positioned.fill(
-                child: GoogleMap(
-                  style: darkMapStyle,
-                  initialCameraPosition: CameraPosition(
-                    target: LatLng(lat, lng),
-                    zoom: 17,
-                  ),
-                  markers: {
-                    Marker(
-                      markerId: const MarkerId('emergencia'),
-                      position: LatLng(lat, lng),
-                      icon: customIcon ?? BitmapDescriptor.defaultMarker,
-                    ),
-                  },
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-
-                    // fuerza refresco en algunos dispositivos (Moto G22 incluido)
-                    Future.delayed(const Duration(milliseconds: 300), () {
-                      if (_mapController != null) {
-                        _mapController!.moveCamera(
-                          CameraUpdate.newLatLng(LatLng(lat, lng)),
-                        );
-                      }
-                    });
-
-                    cargarIcono(tipo);
-                  },
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
-                ),
-              ),
-
-              // 🌑 CAPA OSCURA
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withOpacity(0.4),
-                ),
-              ),
-
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // 🔥 ICONO + TEXTO
+                      // 🔥 ICONO CENTRAL + TIPO DE ALERTA
                       Column(
                         children: [
-                          Image.asset(obtenerImagenAlerta(tipo), height: 120),
-                          const SizedBox(height: 10),
+                          Image.asset(obtenerImagenAlerta(tipo), height: 160),
+                          const SizedBox(height: 15),
                           Text(
                             tipo.toUpperCase(),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 32,
+                              fontSize: 38,
                               fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
                             ),
                           ),
                         ],
                       ),
 
-                      // 🔴 TARJETA ROJA
+                      // 🔴 TARJETA ROJA (Información del Vecino)
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.redAccent, width: 2),
+                          color: Colors.black.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(25),
+                          border: Border.all(color: Colors.white24, width: 1),
                         ),
                         child: Column(
                           children: [
                             ListTile(
-                              leading:
-                                  const Icon(Icons.person, color: Colors.white),
+                              leading: const Icon(Icons.person,
+                                  color: Colors.white, size: 30),
                               title: Text(nombre,
                                   style: const TextStyle(
-                                      color: Colors.white, fontSize: 24)),
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                            // 🏘️ NUEVO: Fila del Barrio
+                            ListTile(
+                              leading: const Icon(Icons.location_city,
+                                  color: Colors.white70),
+                              title: Text(barrio,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 20)),
                             ),
                             ListTile(
                               leading: const Icon(Icons.phone,
                                   color: Colors.greenAccent),
                               title: Text(celular,
                                   style: const TextStyle(
-                                      color: Colors.white, fontSize: 20)),
+                                      color: Colors.white, fontSize: 22)),
                               onTap: () => llamar(celular),
                             ),
                           ],
                         ),
                       ),
 
-                      // 🚀 BOTON
+                      // 🚀 BOTÓN NAVEGAR (Súper accesible)
                       SizedBox(
                         width: double.infinity,
-                        height: 65,
+                        height: 55,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red[900],
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15)),
+                            elevation: 8,
                           ),
-                          onPressed: () => _moverAlIncendio(lat, lng),
-                          icon: const Icon(Icons.navigation),
-                          label: const Text("NAVEGAR",
-                              style: TextStyle(fontSize: 18)),
+                          onPressed: () {
+                            HapticFeedback
+                                .heavyImpact(); // Vibración más fuerte al tocar
+                            abrirMapa(lat, lng);
+                          },
+                          icon: const Icon(Icons.navigation,
+                              color: Colors.white, size: 30),
+                          label: const Text("NAVEGAR AL LUGAR",
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],

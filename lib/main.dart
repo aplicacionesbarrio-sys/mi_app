@@ -9,11 +9,12 @@ import 'screens/inicio_page.dart';
 import 'screens/seguridad_page.dart'; // <--- IMPORTANTE: Nueva página
 import 'screens/admin_servicios_page.dart'; // <--- IMPORTANTE: Nueva página
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
+  await pedirPermisos();
   runApp(const MyApp());
 }
 
@@ -103,4 +104,8 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> pedirPermisos() async {
+  LocationPermission permission = await Geolocator.requestPermission();
 }

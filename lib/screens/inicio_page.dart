@@ -29,7 +29,7 @@ class _InicioPageState extends State<InicioPage> {
   String nombreVecinoReal = "Cargando...";
   String telefonoVecinoReal = "...";
   int rolUsuario = 3; // Nivel de acceso (3 por defecto es vecino)
-
+  String barrioReal = "Cargando...";
   @override
   void initState() {
     super.initState();
@@ -41,7 +41,7 @@ class _InicioPageState extends State<InicioPage> {
   Future<void> obtenerDatosUsuario() async {
     var build = await DeviceInfoPlugin().androidInfo;
     String idCelu = build.id;
-
+    debugPrint("ID DEL CELULAR: $idCelu");
     var usuarioQuery = await FirebaseFirestore.instance
         .collection('usuarios')
         .where('deviceId', isEqualTo: idCelu)
@@ -50,11 +50,12 @@ class _InicioPageState extends State<InicioPage> {
     if (usuarioQuery.docs.isNotEmpty) {
       // 1. Leemos los datos una sola vez
       final datos = usuarioQuery.docs.first.data();
-
+      debugPrint("DATOS COMPLETOS: $datos");
       setState(() {
         nombreVecinoReal = datos['nombre'] ?? "Sin Nombre";
         telefonoVecinoReal = datos['numerodecelular'] ?? "Sin Telefono";
         rolUsuario = datos['rol'] ?? 3;
+        barrioReal = datos['barrio'] ?? "Sin barrio";
         debugPrint("🛡️ NIVEL DE ACCESO DETECTADO: $rolUsuario");
       });
       debugPrint("👑 Mi nivel de acceso actual es: $rolUsuario");
@@ -139,6 +140,7 @@ class _InicioPageState extends State<InicioPage> {
       'ubicacion': GeoPoint(lat, lng),
       'link_mapa': 'https://www.google.com/maps?q=$lat,$lng',
       'destinatarios': paraQuien,
+      'barrio_vecino': barrioReal,
     });
 
     // TEMPORIZADOR: El cartel verde de arriba desaparece a los 10 segundos
@@ -215,6 +217,7 @@ class _InicioPageState extends State<InicioPage> {
                   const Text("Selecciona tu alerta",
                       style:
                           TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text("Barrio: $barrioReal"),
                   const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -327,7 +330,8 @@ class _InicioPageState extends State<InicioPage> {
                                 !botonHabilitado ||
                                 alertasBloqueadas
                                     .contains(tipoAlertaSeleccionada) ||
-                                nombreVecinoReal ==
+                                nombreVecinoReal == "Cargando..." ||
+                                barrioReal ==
                                     "Cargando...") // <--- AGREGAMOS ESTA LÍNEA
                             ? null
                             : enviarAlerta,
