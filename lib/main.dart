@@ -108,4 +108,10 @@ class MyApp extends StatelessWidget {
 
 Future<void> pedirPermisos() async {
   LocationPermission permission = await Geolocator.requestPermission();
+
+  if (permission == LocationPermission.denied) {
+    debugPrint("Permiso denegado");
+  } else {
+    debugPrint("Permiso concedido");
+  }
 }

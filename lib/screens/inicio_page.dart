@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:vibration/vibration.dart';
 import '../widgets_personalizados.dart';
-import 'reclamos_page.dart';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:mi_app/screens/admin_servicios_page.dart';
+import 'panel_reclamos.dart';
 
 class InicioPage extends StatefulWidget {
   const InicioPage({super.key});
@@ -30,6 +31,8 @@ class _InicioPageState extends State<InicioPage> {
   String telefonoVecinoReal = "...";
   int rolUsuario = 3; // Nivel de acceso (3 por defecto es vecino)
   String barrioReal = "Cargando...";
+  bool cargando = true;
+
   @override
   void initState() {
     super.initState();
@@ -293,33 +296,6 @@ class _InicioPageState extends State<InicioPage> {
                       ),
                     ),
 
-                  // BOTÓN EXCLUSIVO PARA RECLAMOS (Rol 5)
-                  if (rolUsuario == 5)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ReclamosPage(
-                                rolUsuario: rolUsuario, // <-- pasamos el rol
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text("VER RECLAMOS"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
                   if (!botonHabilitado)
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -431,10 +407,11 @@ class _InicioPageState extends State<InicioPage> {
       estaSeleccionado: false,
       colorFondo: const Color.fromARGB(255, 252, 250, 250),
       accion: () {
+        debugPrint("👉 BOTON MAS OPCIONES PRESIONADO");
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ReclamosPage(rolUsuario: rolUsuario),
+            builder: (context) => const PanelReclamos(),
           ),
         );
       },

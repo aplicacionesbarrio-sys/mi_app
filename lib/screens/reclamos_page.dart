@@ -10,10 +10,7 @@ import '../widgets_personalizados.dart';
 import 'servicios_page.dart';
 
 class ReclamosPage extends StatefulWidget {
-  final int rolUsuario; // <-- agregamos
-
-  const ReclamosPage({super.key, required this.rolUsuario});
-
+  const ReclamosPage({super.key});
   @override
   State<ReclamosPage> createState() => _ReclamosPageState();
 }
@@ -25,7 +22,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String nombreVecinoReal = "Cargando...";
   String telefonoVecinoReal = "Cargando...";
   final TextEditingController _detalleController = TextEditingController();
-  late Color colorFondoPantalla;
+
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
   Future<void> enviarReclamoAlFirebase(String tipoRecibido) async {
     // 1. Usamos una variable dinámica para que acepte un nombre solo o una lista []
@@ -102,12 +99,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
     super.initState();
 
     // Color de fondo solo para rol 5
-    if (widget.rolUsuario == 5) {
-      colorFondoPantalla = Colors.green.shade100; // Reclamos: verde suave
-    } else {
-      colorFondoPantalla = const Color.fromARGB(
-          255, 187, 233, 246); // Otros: celeste por defecto
-    }
 
     // Cargar bloqueos y datos de usuario
     _cargarEstadoBloqueos();
