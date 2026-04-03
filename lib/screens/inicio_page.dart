@@ -7,7 +7,8 @@ import '../widgets_personalizados.dart';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:mi_app/screens/admin_servicios_page.dart';
-import 'panel_reclamos.dart';
+
+import 'reclamos_page.dart';
 
 class InicioPage extends StatefulWidget {
   const InicioPage({super.key});
@@ -144,9 +145,7 @@ class _InicioPageState extends State<InicioPage> {
       'link_mapa': 'https://www.google.com/maps?q=$lat,$lng',
       'destinatarios': paraQuien,
       'estado': 'activa', // 👈 CLAVE
-      'barrio_vecino': (barrioReal == null || barrioReal.isEmpty)
-          ? "ERROR_DATO_VACIO"
-          : barrioReal,
+      'barrio_vecino': barrioReal.isEmpty ? "Sin barrio" : barrioReal,
     });
 
     // TEMPORIZADOR: El cartel verde de arriba desaparece a los 10 segundos
@@ -411,7 +410,7 @@ class _InicioPageState extends State<InicioPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const PanelReclamos(),
+            builder: (context) => const ReclamosPage(),
           ),
         );
       },

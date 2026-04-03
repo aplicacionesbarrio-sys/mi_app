@@ -21,10 +21,12 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String mensajeConfirmacion = "";
   String nombreVecinoReal = "Cargando...";
   String telefonoVecinoReal = "Cargando...";
+  String barrioVecinoReal = "Cargando...";
   final TextEditingController _detalleController = TextEditingController();
 
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
-  Future<void> enviarReclamoAlFirebase(String tipoRecibido) async {
+  Future<void> enviarReclamoAlFirebase(
+      String tipoRecibido, String barrioVecinoReal) async {
     // 1. Usamos una variable dinámica para que acepte un nombre solo o una lista []
     dynamic empresasDestino;
 
@@ -73,7 +75,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
         'fecha': FieldValue.serverTimestamp(),
         'ubicacion': GeoPoint(position.latitude, position.longitude),
         'estado': 'pendiente',
-
+        'barrio_vecino': barrioVecinoReal,
         // Datos extra exclusivos de Reclamos
         'empresa_destino': empresasDestino,
         'detalle': _detalleController.text.trim(),
@@ -135,13 +137,14 @@ class _ReclamosPageState extends State<ReclamosPage> {
 
     String nombreLeido = prefs.getString('nombre') ?? "";
     String celularLeido = prefs.getString('numerodecelular') ?? "";
-
+    String barrioLeido = prefs.getString('barrio') ?? "";
     if (!mounted) return;
 
     setState(() {
       nombreVecinoReal = nombreLeido.isNotEmpty ? nombreLeido : "Vecino";
       telefonoVecinoReal =
           celularLeido.isNotEmpty ? celularLeido : "Sin número";
+      barrioVecinoReal = barrioLeido.isNotEmpty ? barrioLeido : "Sin barrio";
     });
 
     debugPrint("📖 DATOS CARGADOS: $nombreVecinoReal - $telefonoVecinoReal");
@@ -171,7 +174,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
     if (reclamoSeleccionado.isEmpty) return;
     String tipoEnviado = reclamoSeleccionado;
 
-    await enviarReclamoAlFirebase(tipoEnviado);
+    await enviarReclamoAlFirebase(tipoEnviado, barrioVecinoReal);
 
     if (await Vibration.hasVibrator() == true) {
       Vibration.vibrate(duration: 500);

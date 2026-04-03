@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'reclamo_detalle_page.dart';
-
+import 'vista_reclamo_screen.dart';
 
 class PanelReclamos extends StatelessWidget {
   const PanelReclamos({super.key});
@@ -35,73 +34,143 @@ class PanelReclamos extends StatelessWidget {
             itemBuilder: (context, index) {
               final data = reclamos[index];
 
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => Container(), // 👈 TEMPORAL
-                    ),
-                  );
-                },
+              // --- ZONA DE SEGURIDAD PARA QUE NO EXPLOTE ---
+              String barrio = data.data().containsKey('barrio_vecino')
+                  ? data['barrio_vecino']
+                  : "Sin barrio";
 
-                // 🔥 MANTENER PRESIONADO PARA BORRAR
+              String nombre = data.data().containsKey('nombre')
+                  ? data['nombre']
+                  : "Vecino Anónimo";
+              // ----------------------------------------------
+
+              // --- LÓGICA DE COLORES PARA EL ESTADO ---
+              String estado = data.data().containsKey('estado')
+                  ? data['estado']
+                  : 'pendiente';
+              Color colorEstado =
+                  estado == 'solucionado' ? Colors.blue : Colors.green;
+              String textoEstado =
+                  estado == 'solucionado' ? 'SOLUCIONADO' : 'PENDIENTE';
+
+              return GestureDetector(
                 onLongPress: () {
                   showDialog(
                     context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("Eliminar reclamo"),
-                      content: const Text("¿Seguro que querés eliminarlo?"),
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      title: const Text("⚠️ ¿Eliminar Reclamo?"),
+                      content: const Text(
+                          "Esta acción borrará el reclamo permanentemente."),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text("Cancelar"),
+                          child: const Text("CANCELAR"),
                         ),
-                        TextButton(
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red),
                           onPressed: () {
-                            data.reference.delete();
+                            data.reference
+                                .delete(); // 🔥 Esto borra de Firebase
                             Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text("Reclamo eliminado")),
+                            );
                           },
-                          child: const Text(
-                            "Eliminar",
-                            style: TextStyle(color: Colors.red),
-                          ),
+                          child: const Text("ELIMINAR",
+                              style: TextStyle(color: Colors.white)),
                         ),
                       ],
                     ),
                   );
                 },
-
                 child: Container(
                   margin:
                       const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.green, width: 2),
-                    boxShadow: const [
+                    color: const Color(0xFFF2F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: colorEstado, width: 1.5),
+                    boxShadow: [
                       BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 6,
-                        offset: Offset(0, 3),
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       )
                     ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "${data['tipo']}",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "$nombre - ${data['tipo']}",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                                color: Color(0xFF2D3142),
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.touch_app,
+                              color: Colors.grey, size: 20),
+                        ],
                       ),
-                      const SizedBox(height: 5),
-                      Text("👤 ${data['nombre']}"),
-                      Text("🏘 ${data['barrio_vecino'] ?? 'Sin barrio'}"),
-                      Text("📞 ${data['numerodecelular']}"),
+                      const SizedBox(height: 4),
+                      Text("🏠 $barrio",
+                          style: TextStyle(color: Colors.grey.shade700)),
+                      Text(
+                        "Cel: ${data['numerodecelular'] ?? 'Sin número'}",
+                        style: TextStyle(
+                            color: Colors.grey.shade700, fontSize: 15),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(height: 1),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_forward_ios,
+                                size: 18, color: Colors.blueGrey),
+                            onPressed: () {
+                              // 1. Usamos 'data' directamente porque ya es el documento del loop
+                              final datosMapeados = data.data();
+
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => VistaReclamoScreen(
+                                    nombre: datosMapeados['nombre_vecino'] ??
+                                        'Sin nombre',
+                                    barrio:
+                                        datosMapeados['barrio'] ?? 'Sin barrio',
+                                    telefono: datosMapeados['numero_celular'] ??
+                                        'Sin número',
+                                    tipo: datosMapeados['tipo'] ?? 'Sin tipo',
+                                    detalle: datosMapeados['detalle'] ??
+                                        'Sin detalle',
+                                    ubicacion:
+                                        datosMapeados['ubicacion'], // GeoPoint
+                                    fecha: datosMapeados['fecha'], // Timestamp
+                                    direccion:
+                                        datosMapeados.containsKey('direccion')
+                                            ? datosMapeados['direccion']
+                                            : 'No especificada',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

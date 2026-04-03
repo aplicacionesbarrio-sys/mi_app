@@ -10,6 +10,7 @@ import 'screens/seguridad_page.dart'; // <--- IMPORTANTE: Nueva página
 import 'screens/admin_servicios_page.dart'; // <--- IMPORTANTE: Nueva página
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
+import 'screens/panel_reclamos.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +51,7 @@ Future<Widget> verificarUsuario() async {
     await prefs.setString('nombre', datos['nombre'] ?? "Vecino");
     await prefs.setString(
         'numerodecelular', datos['numerodecelular'] ?? "Sin número");
-
+    await prefs.setString('barrio', datos['barrio'] ?? "Sin barrio");
     debugPrint("🛡️ ACCESO: Usuario reconocido con ROL: $rol");
 
     // 🚀 Lógica de redirección profesional
@@ -60,6 +61,10 @@ Future<Widget> verificarUsuario() async {
     } else if (rol == 4) {
       debugPrint("🚨 Entrando como Seguridad");
       return const SeguridadPage();
+    } else if (rol == 5) {
+      // <--- ESTA ES LA QUE PEGASTE
+      debugPrint("📊 Entrando al Panel de Gestión (Rol 5)");
+      return const PanelReclamos();
     } else {
       debugPrint("🏠 Entrando como Vecino");
       return const InicioPage();

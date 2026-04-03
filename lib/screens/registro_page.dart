@@ -175,7 +175,8 @@ class _RegistroPageState extends State<RegistroPage> {
 
                       // 5. Navegación
                       await Future.delayed(const Duration(seconds: 2));
-                      if (mounted) {
+                      // 🛡️ Forma segura que no tira error en rojo:
+                      if (context.mounted) {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
