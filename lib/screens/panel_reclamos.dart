@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'vista_reclamo_screen.dart';
+import 'reclamo_detalle_page.dart';
 
 class PanelReclamos extends StatelessWidget {
   const PanelReclamos({super.key});
@@ -48,10 +49,11 @@ class PanelReclamos extends StatelessWidget {
               String estado = data.data().containsKey('estado')
                   ? data['estado']
                   : 'pendiente';
+              // Buscá esto y dejalo ASÍ:
               Color colorEstado =
-                  estado == 'solucionado' ? Colors.blue : Colors.green;
+                  (estado == 'solucionado') ? Colors.blue : Colors.green;
               String textoEstado =
-                  estado == 'solucionado' ? 'SOLUCIONADO' : 'PENDIENTE';
+                  (estado == 'solucionado') ? 'SOLUCIONADO' : 'PENDIENTE';
 
               return GestureDetector(
                 onLongPress: () {
@@ -110,13 +112,40 @@ class PanelReclamos extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(
-                              "$nombre - ${data['tipo']}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 17,
-                                color: Color(0xFF2D3142),
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    (data['tipo'] ?? 'Sin tipo')
+                                        .toString()
+                                        .toUpperCase(),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                      color: Color(0xFF2D3142),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.person,
+                                        size: 18, color: Colors.grey),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      nombre,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.normal,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                           const Icon(Icons.touch_app,
@@ -137,38 +166,88 @@ class PanelReclamos extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_forward_ios,
-                                size: 18, color: Colors.blueGrey),
-                            onPressed: () {
-                              // 1. Usamos 'data' directamente porque ya es el documento del loop
-                              final datosMapeados = data.data();
+                          // 1. Extraemos los datos una sola vez para que funcionen en ambos botones
+                          (() {
+                            final datosMapeados =
+                                data.data() as Map<String, dynamic>;
 
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => VistaReclamoScreen(
-                                    nombre: datosMapeados['nombre_vecino'] ??
-                                        'Sin nombre',
-                                    barrio:
-                                        datosMapeados['barrio'] ?? 'Sin barrio',
-                                    telefono: datosMapeados['numero_celular'] ??
-                                        'Sin número',
-                                    tipo: datosMapeados['tipo'] ?? 'Sin tipo',
-                                    detalle: datosMapeados['detalle'] ??
-                                        'Sin detalle',
-                                    ubicacion:
-                                        datosMapeados['ubicacion'], // GeoPoint
-                                    fecha: datosMapeados['fecha'], // Timestamp
-                                    direccion:
-                                        datosMapeados.containsKey('direccion')
-                                            ? datosMapeados['direccion']
-                                            : 'No especificada',
+                            return Expanded(
+                              // Usamos Expanded para que se acomoden bien
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // --- BOTÓN DE ESTADO (CAMBIA COLOR) ---
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      String nuevoEstado =
+                                          (datosMapeados['estado'] ==
+                                                  'solucionado')
+                                              ? 'pendiente'
+                                              : 'solucionado';
+
+                                      await FirebaseFirestore.instance
+                                          .collection(
+                                              'reclamos') // <--- REVISÁ QUE SE LLAME ASÍ TU COLECCIÓN
+                                          .doc(data.id)
+                                          .update({'estado': nuevoEstado});
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: colorEstado,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20)),
+                                    ),
+                                    child: Text(textoEstado,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+
+                                  // --- FLECHITA DE DETALLES ---
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_forward_ios,
+                                        size: 18, color: Colors.blueGrey),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              VistaReclamoScreen(
+                                            // 1. Usamos 'nombre' que es el real en tu Firebase
+                                            nombre: datosMapeados['nombre'] ??
+                                                'Sin nombre',
+
+                                            // 2. Corregimos el Barrio (fijate si en Firebase es 'barrio' o 'Barrio')
+                                            barrio: datosMapeados['barrio'] ??
+                                                datosMapeados['Barrio'] ??
+                                                'Sin barrio',
+
+                                            // 3. Usamos 'numerodecelular' que es el que vimos en tu inicio_page
+                                            telefono: datosMapeados[
+                                                    'numerodecelular'] ??
+                                                'Sin número',
+
+                                            tipo: datosMapeados['tipo'] ??
+                                                'Sin tipo',
+                                            detalle: datosMapeados['detalle'] ??
+                                                'Sin detalle',
+                                            ubicacion:
+                                                datosMapeados['ubicacion'],
+                                            fecha: datosMapeados['fecha'],
+                                            direccion: datosMapeados
+                                                    .containsKey('direccion')
+                                                ? datosMapeados['direccion']
+                                                : 'No especificada',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ), // <--- Asegurate de que termine así, con coma o punto y coma según donde esté
+                                ],
+                              ),
+                            );
+                          })(),
                         ],
                       ),
                     ],
