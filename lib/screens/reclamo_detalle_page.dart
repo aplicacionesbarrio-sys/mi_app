@@ -21,10 +21,17 @@ class ReclamoDetallePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> data = reclamo.data() as Map<String, dynamic>;
+// --- COPIÁ Y PEGÁ ESTA LÍNEA DE ABAJO ---
+    print("DEBUG RECLAMO: $data");
+    // --- LÓGICA PARA BUSCAR EL BARRIO CORRECTO ---
+    final String barrioMostrado = data['barrio_vecino'] ??
+        data['barrio'] ??
+        data['Barrio'] ??
+        'Sin barrio';
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green, // El verde que te gusta
+        backgroundColor: Colors.green,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text("Detalles del Reclamo",
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -35,22 +42,41 @@ class ReclamoDetallePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 1. TIPO DE RECLAMO
+            const Text("TIPO DE RECLAMO:",
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+            Text("${data['tipo'] ?? 'Sin tipo'}".toUpperCase(),
+                style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red)),
+
+            const Divider(height: 30),
+
+            // 2. BARRIO Y TELÉFONO
+            _datoRenglon(Icons.home, "BARRIO", barrioMostrado),
+
+            // --- PROBEMOS CON 'barrio' QUE SÍ ESTÁ EN TU FIREBASE ---
+            _datoRenglon(Icons.location_on, "DIRECCIÓN",
+                "${data['domicilio'] ?? data['barrio'] ?? 'No especificada'}"),
+
+            _datoRenglon(Icons.phone, "TELÉFONO",
+                "${data['numerodecelular'] ?? 'Sin número'}"),
+
+            const Divider(height: 30),
+
+            // 3. DATOS DEL VECINO (Ahora más abajo)
             const Text("VECINO:",
                 style:
                     TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
             Text("${data['nombre'] ?? 'Sin nombre'}",
                 style:
-                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const Divider(height: 30),
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
 
-            _datoRenglon(
-                Icons.home, "BARRIO", "${data['barrio'] ?? 'Sin barrio'}"),
-            _datoRenglon(Icons.phone, "TELÉFONO",
-                "${data['numerodecelular'] ?? 'Sin número'}"),
-            _datoRenglon(Icons.warning, "TIPO", "${data['tipo'] ?? 'Sin tipo'}",
-                color: Colors.red),
+            const SizedBox(height: 25),
 
-            const SizedBox(height: 20),
+            // 4. DETALLES
             const Text("DETALLE:",
                 style:
                     TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -59,17 +85,21 @@ class ReclamoDetallePage extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // BOTÓN GPS (Lo rescatamos de la otra pantalla)
+            // 5. BOTÓN GPS
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
                 onPressed: () => _abrirMapa(data['ubicacion'] as GeoPoint?),
                 icon: const Icon(Icons.navigation),
-                label: const Text("IR AL LUGAR (GPS)"),
+                label: const Text("IR AL LUGAR (GPS)",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   foregroundColor: Colors.white,
+                  elevation: 5,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),

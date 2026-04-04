@@ -33,6 +33,7 @@ class _InicioPageState extends State<InicioPage> {
   int rolUsuario = 3; // Nivel de acceso (3 por defecto es vecino)
   String barrioReal = "Cargando...";
   bool cargando = true;
+  String domicilioReal = "";
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _InicioPageState extends State<InicioPage> {
 
   // --- TU FUNCIÓN ACTUAL (NO SE TOCA) ---
   Future<void> obtenerDatosUsuario() async {
+    debugPrint("ENTRÓ A obtenerDatosUsuario");
     var build = await DeviceInfoPlugin().androidInfo;
     String idCelu = build.id;
     debugPrint("ID DEL CELULAR: $idCelu");
@@ -61,6 +63,8 @@ class _InicioPageState extends State<InicioPage> {
         rolUsuario = datos['rol'] ?? 3;
         barrioReal = datos['barrio'] ?? "Sin barrio";
         debugPrint("🛡️ NIVEL DE ACCESO DETECTADO: $rolUsuario");
+        domicilioReal =
+            datos['domicilio'] ?? "Sin Domicilio"; // USA 'datos', NO 'doc'
       });
       debugPrint("👑 Mi nivel de acceso actual es: $rolUsuario");
     } else {
@@ -146,6 +150,7 @@ class _InicioPageState extends State<InicioPage> {
       'destinatarios': paraQuien,
       'estado': 'activa', // 👈 CLAVE
       'barrio_vecino': barrioReal.isEmpty ? "Sin barrio" : barrioReal,
+      'domicilio': domicilioReal,
     });
 
     // TEMPORIZADOR: El cartel verde de arriba desaparece a los 10 segundos

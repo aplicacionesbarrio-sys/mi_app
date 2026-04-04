@@ -81,6 +81,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
         'detalle': _detalleController.text.trim(),
         'link_mapa':
             "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}",
+        'domicilio': _detalleController.text.trim(),
       });
       _detalleController.clear();
     } catch (e) {

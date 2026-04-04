@@ -168,8 +168,7 @@ class PanelReclamos extends StatelessWidget {
                         children: [
                           // 1. Extraemos los datos una sola vez para que funcionen en ambos botones
                           (() {
-                            final datosMapeados =
-                                data.data() as Map<String, dynamic>;
+                            final datosMapeados = data.data();
 
                             return Expanded(
                               // Usamos Expanded para que se acomoden bien
@@ -205,6 +204,7 @@ class PanelReclamos extends StatelessWidget {
                                   ),
 
                                   // --- FLECHITA DE DETALLES ---
+
                                   IconButton(
                                     icon: const Icon(Icons.arrow_forward_ios,
                                         size: 18, color: Colors.blueGrey),
@@ -212,33 +212,11 @@ class PanelReclamos extends StatelessWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
+                                          // Cambiamos 'VistaReclamoScreen' por 'ReclamoDetallePage'
                                           builder: (context) =>
-                                              VistaReclamoScreen(
-                                            // 1. Usamos 'nombre' que es el real en tu Firebase
-                                            nombre: datosMapeados['nombre'] ??
-                                                'Sin nombre',
-
-                                            // 2. Corregimos el Barrio (fijate si en Firebase es 'barrio' o 'Barrio')
-                                            barrio: datosMapeados['barrio'] ??
-                                                datosMapeados['Barrio'] ??
-                                                'Sin barrio',
-
-                                            // 3. Usamos 'numerodecelular' que es el que vimos en tu inicio_page
-                                            telefono: datosMapeados[
-                                                    'numerodecelular'] ??
-                                                'Sin número',
-
-                                            tipo: datosMapeados['tipo'] ??
-                                                'Sin tipo',
-                                            detalle: datosMapeados['detalle'] ??
-                                                'Sin detalle',
-                                            ubicacion:
-                                                datosMapeados['ubicacion'],
-                                            fecha: datosMapeados['fecha'],
-                                            direccion: datosMapeados
-                                                    .containsKey('direccion')
-                                                ? datosMapeados['direccion']
-                                                : 'No especificada',
+                                              ReclamoDetallePage(
+                                            reclamo:
+                                                data, // Solo pasamos 'data', la pantalla nueva se encarga del resto
                                           ),
                                         ),
                                       );
