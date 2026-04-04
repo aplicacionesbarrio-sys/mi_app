@@ -128,6 +128,9 @@ class _RegistroPageState extends State<RegistroPage> {
                         'nombre', _nombreController.text.trim());
                     await prefs.setString(
                         'numerodecelular', _celularController.text.trim());
+                    await prefs.setString(
+                        'domicilio', _domicilioController.text.trim());
+                    await prefs.setString('barrio', barrioSeleccionado ?? "");
 
                     debugPrint(
                         "✅ Memoria local actualizada: ${_nombreController.text}");

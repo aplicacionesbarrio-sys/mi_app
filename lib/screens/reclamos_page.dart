@@ -22,6 +22,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String nombreVecinoReal = "Cargando...";
   String telefonoVecinoReal = "Cargando...";
   String barrioVecinoReal = "Cargando...";
+  String direccionVecinoReal = "Cargando...";
   final TextEditingController _detalleController = TextEditingController();
 
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
@@ -67,21 +68,26 @@ class _ReclamosPageState extends State<ReclamosPage> {
           desiredAccuracy: LocationAccuracy.high);
 
       // 2. Envío a Firebase (Copiando la estructura de Servicios que ya funciona)
+      // ... dentro de enviarReclamoAlFirebase ...
       await FirebaseFirestore.instance.collection('reclamos').add({
         'tipo': tipoRecibido,
-        'nombre': nombreVecinoReal, // <--- 'nombre' como en servicios
-        'numerodecelular':
-            telefonoVecinoReal, // <--- 'numerodecelular' como en servicios
+        'nombre': nombreVecinoReal,
+        'numerodecelular': telefonoVecinoReal,
         'fecha': FieldValue.serverTimestamp(),
         'ubicacion': GeoPoint(position.latitude, position.longitude),
         'estado': 'pendiente',
         'barrio_vecino': barrioVecinoReal,
-        // Datos extra exclusivos de Reclamos
         'empresa_destino': empresasDestino,
-        'detalle': _detalleController.text.trim(),
+        'detalle': _detalleController.text
+            .trim(), // El detalle es lo que el usuario escribe
+
+        // CORRECCIÓN 1: Link de mapa con sintaxis correcta
         'link_mapa':
-            "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}",
-        'domicilio': _detalleController.text.trim(),
+            "https://www.google.com/maps?q=${position.latitude},${position.longitude}",
+
+        // CORRECCIÓN 2: Aquí usamos la dirección real del perfil, no el detalle vacío
+        'domicilio':
+            direccionVecinoReal, // Ya tiene "Sin dirección" por defecto desde el setState
       });
       _detalleController.clear();
     } catch (e) {
@@ -139,6 +145,9 @@ class _ReclamosPageState extends State<ReclamosPage> {
     String nombreLeido = prefs.getString('nombre') ?? "";
     String celularLeido = prefs.getString('numerodecelular') ?? "";
     String barrioLeido = prefs.getString('barrio') ?? "";
+    // Intentamos leer 'direccion' o 'domicilio', por las dudas
+    String domicilioLeido = prefs.getString('domicilio') ?? "";
+
     if (!mounted) return;
 
     setState(() {
@@ -146,9 +155,15 @@ class _ReclamosPageState extends State<ReclamosPage> {
       telefonoVecinoReal =
           celularLeido.isNotEmpty ? celularLeido : "Sin número";
       barrioVecinoReal = barrioLeido.isNotEmpty ? barrioLeido : "Sin barrio";
+      direccionVecinoReal =
+          domicilioLeido.isNotEmpty ? domicilioLeido : "Sin dirección";
     });
 
-    debugPrint("📖 DATOS CARGADOS: $nombreVecinoReal - $telefonoVecinoReal");
+    debugPrint("✅ Datos usuario cargados:");
+    debugPrint("Nombre: $nombreVecinoReal");
+    debugPrint("Teléfono: $telefonoVecinoReal");
+    debugPrint("Barrio: $barrioVecinoReal");
+    debugPrint("Domicilio: $direccionVecinoReal");
   }
 
   Future<void> _guardarBloqueo(String tipo) async {

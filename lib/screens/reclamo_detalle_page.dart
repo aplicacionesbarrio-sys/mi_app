@@ -22,7 +22,7 @@ class ReclamoDetallePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final Map<String, dynamic> data = reclamo.data() as Map<String, dynamic>;
 // --- COPIÁ Y PEGÁ ESTA LÍNEA DE ABAJO ---
-    print("DEBUG RECLAMO: $data");
+    debugPrint("DEBUG RECLAMO: $data");
     // --- LÓGICA PARA BUSCAR EL BARRIO CORRECTO ---
     final String barrioMostrado = data['barrio_vecino'] ??
         data['barrio'] ??

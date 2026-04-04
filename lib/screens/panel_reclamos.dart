@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'vista_reclamo_screen.dart';
+
 import 'reclamo_detalle_page.dart';
 
 class PanelReclamos extends StatelessWidget {

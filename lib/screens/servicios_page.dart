@@ -200,7 +200,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
         if (userDocUid.exists && mounted) {
           String n = userDocUid['nombre'] ?? "Vecino";
           String t = userDocUid['numerodecelular'] ?? "Sin Tel";
-          int rolUsuario = userDocUid['rol'] ?? 3;
 
           await prefs.setString('nombre_local', n);
           await prefs.setString('tel_local', t);
