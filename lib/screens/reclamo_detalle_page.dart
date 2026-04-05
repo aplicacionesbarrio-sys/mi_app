@@ -21,13 +21,21 @@ class ReclamoDetallePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> data = reclamo.data() as Map<String, dynamic>;
-// --- COPIÁ Y PEGÁ ESTA LÍNEA DE ABAJO ---
     debugPrint("DEBUG RECLAMO: $data");
-    // --- LÓGICA PARA BUSCAR EL BARRIO CORRECTO ---
+
     final String barrioMostrado = data['barrio_vecino'] ??
         data['barrio'] ??
         data['Barrio'] ??
         'Sin barrio';
+
+    // Dirección considerando vacío o nulo
+    final String direccionMostrada = (data['domicilio'] != null &&
+            data['domicilio'].toString().trim().isNotEmpty)
+        ? data['domicilio']
+        : (data['barrio'] != null &&
+                data['barrio'].toString().trim().isNotEmpty)
+            ? data['barrio']
+            : 'No especificada';
 
     return Scaffold(
       appBar: AppBar(
@@ -54,19 +62,16 @@ class ReclamoDetallePage extends StatelessWidget {
 
             const Divider(height: 30),
 
-            // 2. BARRIO Y TELÉFONO
+            // 2. BARRIO Y DIRECCIÓN
             _datoRenglon(Icons.home, "BARRIO", barrioMostrado),
-
-            // --- PROBEMOS CON 'barrio' QUE SÍ ESTÁ EN TU FIREBASE ---
-            _datoRenglon(Icons.location_on, "DIRECCIÓN",
-                "${data['domicilio'] ?? data['barrio'] ?? 'No especificada'}"),
+            _datoRenglon(Icons.location_on, "DIRECCIÓN", direccionMostrada),
 
             _datoRenglon(Icons.phone, "TELÉFONO",
                 "${data['numerodecelular'] ?? 'Sin número'}"),
 
             const Divider(height: 30),
 
-            // 3. DATOS DEL VECINO (Ahora más abajo)
+            // 3. DATOS DEL VECINO
             const Text("VECINO:",
                 style:
                     TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),

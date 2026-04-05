@@ -119,6 +119,13 @@ class _RegistroPageState extends State<RegistroPage> {
                       );
                       return;
                     }
+                    if (_domicilioController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Por favor ingresá tu dirección")),
+                      );
+                      return;
+                    }
 
                     final messenger = ScaffoldMessenger.of(context);
 

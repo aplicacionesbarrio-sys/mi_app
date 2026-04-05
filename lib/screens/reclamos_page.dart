@@ -28,10 +28,13 @@ class _ReclamosPageState extends State<ReclamosPage> {
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
   Future<void> enviarReclamoAlFirebase(
       String tipoRecibido, String barrioVecinoReal) async {
-    // 1. Usamos una variable dinámica para que acepte un nombre solo o una lista []
-    dynamic empresasDestino;
+    // Obtener datos del usuario directamente desde SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    String nombreUsuario = prefs.getString('nombre') ?? "Vecino";
+    String celularUsuario = prefs.getString('numerodecelular') ?? "Sin número";
+    String direccionUsuario = prefs.getString('domicilio') ?? "Sin dirección";
 
-    // 2. Lógica de destinos según tu pedido
+    dynamic empresasDestino;
     if (tipoRecibido == "pérdida de agua") {
       empresasDestino = "aguas de la rioja";
     } else if (tipoRecibido == "cable caído") {
@@ -49,7 +52,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
         "bomberos"
       ];
     } else {
-      empresasDestino = "comisaria cercana"; // Destino por defecto
+      empresasDestino = "comisaria cercana";
     }
 
     if (tipoRecibido.isEmpty) {
@@ -59,36 +62,27 @@ class _ReclamosPageState extends State<ReclamosPage> {
 
     try {
       LocationPermission permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        setState(() => mensajeConfirmacion = "Falta permiso de GPS");
-        return;
-      }
+      if (permission == LocationPermission.denied) return;
 
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
-      // 2. Envío a Firebase (Copiando la estructura de Servicios que ya funciona)
-      // ... dentro de enviarReclamoAlFirebase ...
+      // Envío seguro a Firebase
       await FirebaseFirestore.instance.collection('reclamos').add({
         'tipo': tipoRecibido,
-        'nombre': nombreVecinoReal,
-        'numerodecelular': telefonoVecinoReal,
+        'nombre': nombreUsuario,
+        'numerodecelular': celularUsuario,
         'fecha': FieldValue.serverTimestamp(),
         'ubicacion': GeoPoint(position.latitude, position.longitude),
         'estado': 'pendiente',
         'barrio_vecino': barrioVecinoReal,
         'empresa_destino': empresasDestino,
-        'detalle': _detalleController.text
-            .trim(), // El detalle es lo que el usuario escribe
-
-        // CORRECCIÓN 1: Link de mapa con sintaxis correcta
+        'detalle': _detalleController.text.trim(),
         'link_mapa':
             "https://www.google.com/maps?q=${position.latitude},${position.longitude}",
-
-        // CORRECCIÓN 2: Aquí usamos la dirección real del perfil, no el detalle vacío
-        'domicilio':
-            direccionVecinoReal, // Ya tiene "Sin dirección" por defecto desde el setState
+        'domicilio': direccionUsuario, // ✅ Dirección segura
       });
+
       _detalleController.clear();
     } catch (e) {
       setState(() => mensajeConfirmacion = "Error al enviar: $e");
