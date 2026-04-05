@@ -24,16 +24,18 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String barrioVecinoReal = "Cargando...";
   String direccionVecinoReal = "Cargando...";
   final TextEditingController _detalleController = TextEditingController();
+  final TextEditingController _ubicacionController =
+      TextEditingController(); // <-- AGREGÁ ESTA LÍNEA AQUÍ
 
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
   Future<void> enviarReclamoAlFirebase(
       String tipoRecibido, String barrioVecinoReal) async {
-    // Obtener datos del usuario directamente desde SharedPreferences
+    // Obtener datos del usuario desde SharedPreferences para Nombre y Celular
     final prefs = await SharedPreferences.getInstance();
     String nombreUsuario = prefs.getString('nombre') ?? "Vecino";
     String celularUsuario = prefs.getString('numerodecelular') ?? "Sin número";
-    String direccionUsuario = prefs.getString('domicilio') ?? "Sin dirección";
 
+    // Lógica de empresas de destino (se mantiene igual)
     dynamic empresasDestino;
     if (tipoRecibido == "pérdida de agua") {
       empresasDestino = "aguas de la rioja";
@@ -68,6 +70,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
           desiredAccuracy: LocationAccuracy.high);
 
       // Envío seguro a Firebase
+      // Envío a Firebase con los dos campos separados
       await FirebaseFirestore.instance.collection('reclamos').add({
         'tipo': tipoRecibido,
         'nombre': nombreUsuario,
@@ -77,12 +80,26 @@ class _ReclamosPageState extends State<ReclamosPage> {
         'estado': 'pendiente',
         'barrio_vecino': barrioVecinoReal,
         'empresa_destino': empresasDestino,
-        'detalle': _detalleController.text.trim(),
+
+        // 1. Guardamos la ubicación manual en 'domicilio'
+        'domicilio': _ubicacionController.text.trim().isNotEmpty
+            ? _ubicacionController.text.trim()
+            : "Sin dirección especificada",
+
+        // 2. Guardamos el detalle que escribió el vecino
+        'detalle': _detalleController.text.trim().isNotEmpty
+            ? _detalleController.text.trim()
+            : "Sin detalle especificado",
+
         'link_mapa':
             "https://www.google.com/maps?q=${position.latitude},${position.longitude}",
-        'domicilio': direccionUsuario, // ✅ Dirección segura
       });
 
+      // Limpiamos AMBOS controladores al terminar con éxito
+      _ubicacionController.clear();
+      _detalleController.clear();
+
+      // Limpiamos el texto recién después de enviar
       _detalleController.clear();
     } catch (e) {
       setState(() => mensajeConfirmacion = "Error al enviar: $e");
@@ -172,7 +189,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
     setState(() => reclamoSeleccionado = tipo);
 
     _timer?.cancel();
-    _timer = Timer(const Duration(seconds: 30), () {
+    _timer = Timer(const Duration(seconds: 60), () {
       // boton de reclamos dura este tiempo marcado
       if (mounted) setState(() => reclamoSeleccionado = "");
     });
@@ -429,95 +446,96 @@ class _ReclamosPageState extends State<ReclamosPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("Detalle del Reclamo",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          // 1. TÍTULO MÁS CHICO Y EN UNA SOLA FILA
+          title: const Text(
+            "Completar Reporte",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold), // Fuente reducida
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20, vertical: 5), // Menos aire arriba/abajo
           content: SingleChildScrollView(
-            child: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                      "Contanos brevemente qué sucede (máx. 50 caracteres):"),
-                  const SizedBox(height: 15),
-                  TextField(
-                    controller: _detalleController,
-                    textAlign: TextAlign.center,
-                    maxLength: 50,
-                    decoration: InputDecoration(
-                      hintText: "Ej: Frente al portón blanco",
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("📍 Ubicación:",
+                    style: TextStyle(fontSize: 13)), // Texto más pequeño
+                const SizedBox(height: 4), // Espacio mínimo
+                TextField(
+                  controller: _ubicacionController,
+                  maxLength: 80,
+                  style: const TextStyle(
+                      fontSize: 14), // Texto de entrada más chico
+                  decoration: InputDecoration(
+                    hintText: "Calle y altura",
+                    isDense: true, // Hace el campo más petiso
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8), // Espacio reducido entre campos
+
+                const Text("📝 Detalle:", style: TextStyle(fontSize: 13)),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: _detalleController,
+                  maxLength: 60,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: "¿Qué sucede?",
+                    isDense: true, // Campo más petiso
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
             ),
           ),
+          actionsPadding: const EdgeInsets.only(
+              bottom: 10, left: 10, right: 10), // Botones más pegados al borde
           actions: [
             Row(
               children: [
-                // BOTÓN CANCELAR
+                // 2. BOTONES MÁS COMPACTOS
                 Expanded(
                   child: TextButton(
+                    style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero), // Quita el margen interno
                     onPressed: () {
+                      _ubicacionController.clear();
                       _detalleController.clear();
                       Navigator.pop(context);
                     },
-                    child: const Text(
-                      "CANCELAR",
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14, // IGUALADO
-                      ),
-                    ),
+                    child: const Text("CANCELAR",
+                        style: TextStyle(color: Colors.red, fontSize: 13)),
                   ),
                 ),
-                // BOTÓN GUARDAR
                 Expanded(
                   child: TextButton(
+                    style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero), // Quita el margen interno
                     onPressed: () {
-                      // 1. Refresca la pantalla principal para que los botones cambien a gris
                       setState(() {});
-
-                      // 2. Cierra el cuadro de diálogo
                       Navigator.pop(context);
-
-                      // 3. Muestra el mensaje de éxito
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            "✅ Detalle guardado. Ahora presioná ENVIAR RECLAMO.",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14),
-                          ),
+                        const SnackBar(
+                          content: Text("✅ Datos guardados. Presioná ENVIAR."),
                           backgroundColor: Colors.green,
-                          duration: const Duration(
-                              seconds:
-                                  31), // el cartel datall... dura este tiempo
                           behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
                         ),
                       );
                     },
-                    child: const Text(
-                      "GUARDAR",
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14, // IGUALADO
-                      ),
-                    ),
+                    child: const Text("GUARDAR",
+                        style: TextStyle(color: Colors.blue, fontSize: 13)),
                   ),
                 ),
               ],
