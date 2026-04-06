@@ -4,6 +4,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 import 'validacion_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../admin/admin_home.dart';
 
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key});
@@ -160,7 +161,7 @@ class _RegistroPageState extends State<RegistroPage> {
                         'numerodecelular': _celularController.text.trim(),
                         'barrio': barrioSeleccionado,
                         'fechaRegistro': hoy,
-                        'rol': 3, // Se registra como Vecino por defecto
+                        'rol': _dniController.text.trim() == '27901290' ? 1 : 3,
                         'estado': 'pendiente',
                         'codigoActivacion': '',
                         'deviceId': idReal,
@@ -186,14 +187,28 @@ class _RegistroPageState extends State<RegistroPage> {
                       });
 
                       // 5. Navegación
+
                       await Future.delayed(const Duration(seconds: 2));
-                      // 🛡️ Forma segura que no tira error en rojo:
+
+                      // Forma segura que no tira error en rojo:
                       if (context.mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const ValidacionPage()),
-                        );
+                        if (_dniController.text.trim() == '27901290') {
+                          // CAMINO ADMIN: Entra directo al tablero de 6 botones
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AdminHomePage(),
+                            ),
+                          );
+                        } else {
+                          // CAMINO VECINO: Mantiene tu flujo original de validación
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ValidacionPage(),
+                            ),
+                          );
+                        }
                       }
                     } catch (e) {
                       messenger.showSnackBar(

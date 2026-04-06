@@ -7,8 +7,10 @@ import '../widgets_personalizados.dart';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:mi_app/screens/admin_servicios_page.dart';
-
+import '../admin/admin_home.dart';
 import 'reclamos_page.dart';
+import 'validacion_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class InicioPage extends StatefulWidget {
   const InicioPage({super.key});
@@ -47,28 +49,57 @@ class _InicioPageState extends State<InicioPage> {
     debugPrint("ENTRÓ A obtenerDatosUsuario");
     var build = await DeviceInfoPlugin().androidInfo;
     String idCelu = build.id;
-    debugPrint("ID DEL CELULAR: $idCelu");
+
     var usuarioQuery = await FirebaseFirestore.instance
         .collection('usuarios')
         .where('deviceId', isEqualTo: idCelu)
         .get();
 
     if (usuarioQuery.docs.isNotEmpty) {
-      // 1. Leemos los datos una sola vez
       final datos = usuarioQuery.docs.first.data();
-      debugPrint("DATOS COMPLETOS: $datos");
+
+      // Verificamos que la pantalla siga activa antes de seguir
+      if (!mounted) return;
+
       setState(() {
-        nombreVecinoReal = datos['nombre'] ?? "Sin Nombre";
-        telefonoVecinoReal = datos['numerodecelular'] ?? "Sin Telefono";
-        rolUsuario = datos['rol'] ?? 3;
-        barrioReal = datos['barrio'] ?? "Sin barrio";
-        debugPrint("🛡️ NIVEL DE ACCESO DETECTADO: $rolUsuario");
-        domicilioReal =
-            datos['domicilio'] ?? "Sin Domicilio"; // USA 'datos', NO 'doc'
+        domicilioReal = datos['domicilio'] ?? "";
+        cargando = false;
       });
-      debugPrint("👑 Mi nivel de acceso actual es: $rolUsuario");
+
+      int rol = datos['rol'] ?? 3;
+      String estado = datos['estado'] ?? 'pendiente';
+
+      // 1. Buscamos la memoria local
+      final prefs = await SharedPreferences.getInstance();
+      bool yaValidoCodigo = prefs.getBool('codigoValidado') ?? false;
+
+      debugPrint("🛡️ ROL: $rol | ESTADO: $estado | VALIDADO: $yaValidoCodigo");
+
+      // Verificamos de nuevo antes de navegar (seguridad de Flutter)
+      if (!mounted) return;
+
+      // 2. EL SEMÁFORO
+      if (rol == 1) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminHomePage()),
+        );
+      } else if (rol == 3) {
+        // Si no está activo y nunca puso el código, va a validación
+        if (estado == 'pendiente' && !yaValidoCodigo) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ValidacionPage()),
+          );
+        } else {
+          debugPrint("✅ Usuario persistente. Se queda en inicio.");
+        }
+      }
     } else {
-      debugPrint("⚠️ No se encontró ningún usuario con este ID en Firebase");
+      if (!mounted) return;
+      setState(() {
+        cargando = false;
+      });
     }
   }
 

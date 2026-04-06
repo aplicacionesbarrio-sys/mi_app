@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart'; // <--- Nuevo
 import 'dart:io'; // <--- Nuevo
 import 'inicio_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ValidacionPage extends StatefulWidget {
   const ValidacionPage({super.key});
@@ -26,7 +27,7 @@ class _ValidacionPageState extends State<ValidacionPage> {
       String idActual = "";
       var deviceInfo = DeviceInfoPlugin();
 
-      // --- ESTO TE VA A MOSTRAR EL ID EN LA TERMINAL ---
+      // --- MANTENEMOS TU IDENTIFICACIÓN DE DISPOSITIVO ---
       if (Platform.isAndroid) {
         var build = await deviceInfo.androidInfo;
         idActual = build.id;
@@ -36,7 +37,7 @@ class _ValidacionPageState extends State<ValidacionPage> {
         print("EL CÓDIGO QUE ESCRIBISTE ES: $codigo");
       }
 
-      // Buscamos en Firebase
+      // Buscamos en Firebase (FLUJO EXISTENTE)
       final snapshot = await FirebaseFirestore.instance
           .collection('codigos_activacion')
           .where('codigo', isEqualTo: codigo)
@@ -47,16 +48,23 @@ class _ValidacionPageState extends State<ValidacionPage> {
       if (!mounted) return;
 
       if (snapshot.docs.isNotEmpty) {
-        // Si el código es correcto, lo marcamos como usado
+        // 1. Marcamos el código como usado en Firebase (FLUJO EXISTENTE)
         await snapshot.docs.first.reference.update({'usado': true});
 
-        // Pasamos a la pantalla de Inicio
+        // --- 2. NUEVO: GUARDAMOS EN LA MEMORIA DEL CELULAR (PERSISTENCIA) ---
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('codigoValidado', true);
+        debugPrint("✅ Código validado y guardado localmente.");
+
         if (!mounted) return;
+
+        // 3. Pasamos a la pantalla de Inicio (FLUJO EXISTENTE)
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const InicioPage()),
         );
       } else {
+        // Manejo de error si los datos no coinciden (FLUJO EXISTENTE)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Código o Dispositivo incorrecto")),
         );
