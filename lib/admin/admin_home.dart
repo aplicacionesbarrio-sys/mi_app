@@ -8,7 +8,7 @@ class AdminHomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tablero de Administrador'),
-        backgroundColor: Color.fromARGB(255, 79, 30, 152),
+        backgroundColor: const Color.fromARGB(255, 79, 30, 152),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),

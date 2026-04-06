@@ -124,7 +124,7 @@ class _SeguridadPageState extends State<SeguridadPage>
                         Column(
                           children: [
                             Image.asset(obtenerImagenAlerta(tipo), height: 160),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 5),
                             Text(
                               tipo.toUpperCase(),
                               style: const TextStyle(
@@ -172,10 +172,47 @@ class _SeguridadPageState extends State<SeguridadPage>
                                         color: Colors.white, fontSize: 22)),
                                 onTap: () => llamar(celular),
                               ),
+                              // --- AQUÍ EMPIEZA LO NUEVO: FILA DE FECHA Y HORA ---
+                              ListTile(
+                                leading: const Icon(Icons.access_time_filled,
+                                    color: Colors.orangeAccent),
+                                title: Text(
+                                  alerta['fecha'] != null
+                                      ? () {
+                                          DateTime f =
+                                              (alerta['fecha'] as Timestamp)
+                                                  .toDate();
+                                          String dia =
+                                              f.day.toString().padLeft(2, '0');
+                                          String mes = f.month
+                                              .toString()
+                                              .padLeft(2, '0');
+                                          String anio = f.year.toString();
+                                          String hora =
+                                              f.hour.toString().padLeft(2, '0');
+                                          String min = f.minute
+                                              .toString()
+                                              .padLeft(2, '0');
+
+                                          return "$dia-$mes-$anio   $hora:$min";
+                                        }()
+                                      : "Fecha no disponible",
+                                  maxLines: 1, // 👈 FUERZA UNA SOLA LÍNEA
+                                  softWrap: false, // 👈 EVITA EL SALTO DE LÍNEA
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize:
+                                        18, // 👈 BAJAMOS UN POQUITO EL TAMAÑO PARA QUE ENTRE
+                                    fontWeight: FontWeight.w500,
+                                    overflow: TextOverflow
+                                        .visible, //👈 QUE SE VEA COMPLETO
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 35),
+                        const SizedBox(height: 15),
                         // 🚀 BOTÓN NAVEGAR (Súper accesible)
                         SizedBox(
                           width: double.infinity,
