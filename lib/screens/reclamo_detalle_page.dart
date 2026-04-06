@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart'; // Asegúrate de tener esta librería
+import 'package:intl/intl.dart';
 
 class ReclamoDetallePage extends StatelessWidget {
   final QueryDocumentSnapshot reclamo;
@@ -22,7 +23,8 @@ class ReclamoDetallePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final Map<String, dynamic> data = reclamo.data() as Map<String, dynamic>;
     debugPrint("DEBUG RECLAMO: $data");
-
+    String fechaHora = DateFormat('dd/MM/yyyy HH:mm')
+        .format((data['fecha'] as Timestamp).toDate());
     final String barrioMostrado = data['barrio_vecino'] ??
         data['barrio'] ??
         data['Barrio'] ??
@@ -51,14 +53,22 @@ class ReclamoDetallePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. TIPO DE RECLAMO
-            const Text("TIPO DE RECLAMO:",
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-            Text("${data['tipo'] ?? 'Sin tipo'}".toUpperCase(),
-                style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red)),
+            Center(
+              child: Column(
+                children: [
+                  const Text("TIPO DE RECLAMO:",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text(
+                    "${data['tipo'] ?? 'Sin tipo'}".toUpperCase(),
+                    style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
 
             const Divider(height: 30),
 
@@ -72,24 +82,49 @@ class ReclamoDetallePage extends StatelessWidget {
             const Divider(height: 30),
 
             // 3. DATOS DEL VECINO
-            const Text("VECINO:",
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-            Text("${data['nombre'] ?? 'Sin nombre'}",
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Center(
+              child: Column(
+                children: [
+                  const Text("VECINO:",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text(
+                    "${data['nombre'] ?? 'Sin nombre'}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 25),
 
             // 4. DETALLES
-            const Text("DETALLE:",
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-            Text("${data['detalle'] ?? 'Sin detalle adicional'}",
-                style: const TextStyle(fontSize: 16)),
+
+            // 4. DETALLES
+            Center(
+              child: Column(
+                children: [
+                  const Text("DETALLE:",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text(
+                    // Lógica para cortar a 50 letras
+                    data['detalle'] != null &&
+                            data['detalle'].toString().length > 50
+                        ? "${data['detalle'].toString().substring(0, 50)}..."
+                        : "${data['detalle'] ?? 'Sin detalle'}",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 30),
-
+            _datoRenglon(Icons.access_time, "REGISTRADO EL", fechaHora),
+            const SizedBox(height: 30),
             // 5. BOTÓN GPS
             SizedBox(
               width: double.infinity,
@@ -115,7 +150,7 @@ class ReclamoDetallePage extends StatelessWidget {
   }
 
   Widget _datoRenglon(IconData icono, String etiqueta, String valor,
-      {Color color = Colors.black}) {
+      {Color color = Colors.black, double fontSize = 14}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -125,7 +160,12 @@ class ReclamoDetallePage extends StatelessWidget {
           Text("$etiqueta: ",
               style: const TextStyle(fontWeight: FontWeight.bold)),
           Expanded(
-              child: Text(valor, style: TextStyle(color: color, fontSize: 16))),
+            child: Text(
+              valor,
+              // AQUÍ ESTÁ EL CAMBIO:
+              style: TextStyle(color: color, fontSize: fontSize),
+            ),
+          ),
         ],
       ),
     );

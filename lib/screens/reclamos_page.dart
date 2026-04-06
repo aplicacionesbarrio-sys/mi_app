@@ -1,11 +1,9 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
-
 import '../widgets_personalizados.dart';
 import 'servicios_page.dart';
 
@@ -466,7 +464,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
                 const SizedBox(height: 4), // Espacio mínimo
                 TextField(
                   controller: _ubicacionController,
-                  maxLength: 80,
+                  maxLength: 40,
                   style: const TextStyle(
                       fontSize: 14), // Texto de entrada más chico
                   decoration: InputDecoration(
@@ -485,7 +483,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
                 const SizedBox(height: 4),
                 TextField(
                   controller: _detalleController,
-                  maxLength: 60,
+                  maxLength: 50,
                   style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: "¿Qué sucede?",

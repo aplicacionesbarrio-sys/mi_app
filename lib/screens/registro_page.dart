@@ -146,19 +146,21 @@ class _RegistroPageState extends State<RegistroPage> {
                       String idReal = await _obtenerIdReal();
                       DateTime hoy = DateTime.now();
 
-                      // 3. Envío a Firebase
+                      // // 3. Envío a Firebase (Ahora usando el DNI como ID)
                       await FirebaseFirestore.instance
                           .collection('usuarios')
-                          .add({
+                          .doc(_dniController.text
+                              .trim()) // <-- Definimos que el ID sea el DNI
+                          .set({
+                        // <-- Usamos .set para guardar
                         'nombre': _nombreController.text.trim(),
                         'dni': _dniController.text.trim(),
                         'domicilio': _domicilioController.text.trim(),
                         'email': _emailController.text.trim(),
-                        'numerodecelular':
-                            _celularController.text.trim(), // ✅ CAMBIO ACÁ
+                        'numerodecelular': _celularController.text.trim(),
                         'barrio': barrioSeleccionado,
                         'fechaRegistro': hoy,
-                        'rol': 3,
+                        'rol': 3, // Se registra como Vecino por defecto
                         'estado': 'pendiente',
                         'codigoActivacion': '',
                         'deviceId': idReal,
