@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart'; // ✅ IMPORTANTE: Para realizar la llamada
 
 class AdminServiciosPage extends StatelessWidget {
   const AdminServiciosPage({super.key});
+
+  // 📞 FUNCIÓN PARA REALIZAR LA LLAMADA
+  Future<void> _realizarLlamada(String celular) async {
+    if (celular.isEmpty) return;
+    final Uri tel = Uri.parse("tel:$celular");
+    if (await canLaunchUrl(tel)) {
+      await launchUrl(tel);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Gestión de Servicios"),
+        title: const Text("Gestión de Servicios",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.orange,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -31,6 +43,7 @@ class AdminServiciosPage extends StatelessWidget {
               bool fueContactado = data['contactoIniciado'] ?? false;
               String estadoPago = data['estadoPago'] ?? "debe";
               Color colorBorde = fueContactado ? Colors.green : Colors.orange;
+              String numeroCelular = data['numerodecelular'] ?? "";
 
               return Card(
                 elevation: 4,
@@ -39,7 +52,6 @@ class AdminServiciosPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(15),
                 ),
                 margin: const EdgeInsets.symmetric(vertical: 10),
-                // 🖐️ USAMOS INKWELL PARA DETECTAR LA PRESIÓN LARGA
                 child: InkWell(
                   borderRadius: BorderRadius.circular(15),
                   onLongPress: () => _confirmarBorrado(context, doc.reference),
@@ -52,10 +64,13 @@ class AdminServiciosPage extends StatelessWidget {
                           title: Text("${data['nombre']} - ${data['tipo']}",
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 16)),
-                          subtitle: Text("Cel: ${data['numerodecelular']}"),
-                          trailing: Icon(Icons.touch_app,
-                              color:
-                                  Colors.grey.withOpacity(0.5)), // Pista visual
+                          subtitle: Text("Cel: $numeroCelular"),
+                          // 📞 BOTÓN DE LLAMADA DIRECTA
+                          trailing: IconButton(
+                            icon: const Icon(Icons.phone_forwarded,
+                                color: Colors.green, size: 30),
+                            onPressed: () => _realizarLlamada(numeroCelular),
+                          ),
                         ),
                         const Divider(),
                         Row(
@@ -66,6 +81,7 @@ class AdminServiciosPage extends StatelessWidget {
                                 backgroundColor: fueContactado
                                     ? Colors.green
                                     : Colors.orange,
+                                foregroundColor: Colors.white,
                               ),
                               onPressed: () => doc.reference
                                   .update({'contactoIniciado': !fueContactado}),

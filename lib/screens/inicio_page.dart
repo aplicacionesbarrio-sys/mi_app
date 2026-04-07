@@ -61,11 +61,6 @@ class _InicioPageState extends State<InicioPage> {
       // Verificamos que la pantalla siga activa antes de seguir
       if (!mounted) return;
 
-      setState(() {
-        domicilioReal = datos['domicilio'] ?? "";
-        cargando = false;
-      });
-
       int rol = datos['rol'] ?? 3;
       String estado = datos['estado'] ?? 'pendiente';
 
@@ -93,6 +88,13 @@ class _InicioPageState extends State<InicioPage> {
           );
         } else {
           debugPrint("✅ Usuario persistente. Se queda en inicio.");
+          setState(() {
+            domicilioReal = datos['domicilio'] ?? "";
+            nombreVecinoReal = datos['nombre'] ?? "Sin nombre";
+            barrioReal = datos['barrio'] ?? "Sin barrio";
+            telefonoVecinoReal = datos['numerodecelular'] ?? "...";
+            cargando = false;
+          });
         }
       }
     } else {
@@ -231,7 +233,15 @@ class _InicioPageState extends State<InicioPage> {
           ? Colors.grey.shade400
           : (estaSeleccionado ? colorResaltado : colorBase),
       accion: () {
-        if (!alertasBloqueadas.contains(tipo)) alPresionarBoton(tipo);
+        if (!alertasBloqueadas.contains(tipo)) {
+          // 1. Le avisamos a Flutter que la pantalla CAMBIÓ
+          setState(() {
+            tipoAlertaSeleccionada = tipo;
+          });
+
+          // 2. Ejecutamos tu lógica normal
+          alPresionarBoton(tipo);
+        }
       },
     );
   }
@@ -371,10 +381,7 @@ class _InicioPageState extends State<InicioPage> {
                         onPressed: (tipoAlertaSeleccionada.isEmpty ||
                                 !botonHabilitado ||
                                 alertasBloqueadas
-                                    .contains(tipoAlertaSeleccionada) ||
-                                nombreVecinoReal == "Cargando..." ||
-                                barrioReal ==
-                                    "Cargando...") // <--- AGREGAMOS ESTA LÍNEA
+                                    .contains(tipoAlertaSeleccionada))
                             ? null
                             : enviarAlerta,
                         child: Text(

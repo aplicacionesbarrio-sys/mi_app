@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart'; // Asegúrate de tener esta librería
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 
 class ReclamoDetallePage extends StatelessWidget {
@@ -22,22 +22,20 @@ class ReclamoDetallePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> data = reclamo.data() as Map<String, dynamic>;
-    debugPrint("DEBUG RECLAMO: $data");
-    String fechaHora = DateFormat('dd/MM/yyyy HH:mm')
-        .format((data['fecha'] as Timestamp).toDate());
-    final String barrioMostrado = data['barrio_vecino'] ??
-        data['barrio'] ??
-        data['Barrio'] ??
-        'Sin barrio';
 
-    // Dirección considerando vacío o nulo
+    String fechaHora = "";
+    if (data['fecha'] != null) {
+      fechaHora = DateFormat('dd/MM/yyyy HH:mm')
+          .format((data['fecha'] as Timestamp).toDate());
+    }
+
+    final String barrioMostrado =
+        data['barrio_vecino'] ?? data['barrio'] ?? 'Sin barrio';
+
     final String direccionMostrada = (data['domicilio'] != null &&
             data['domicilio'].toString().trim().isNotEmpty)
         ? data['domicilio']
-        : (data['barrio'] != null &&
-                data['barrio'].toString().trim().isNotEmpty)
-            ? data['barrio']
-            : 'No especificada';
+        : 'No especificada';
 
     return Scaffold(
       appBar: AppBar(
@@ -52,34 +50,43 @@ class ReclamoDetallePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. TIPO DE RECLAMO
+            // 1. TIPO DE RECLAMO (CENTRADO Y EN ROJO)
             Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("TIPO DE RECLAMO:",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const Text(
+                    "TIPO DE RECLAMO:",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     "${data['tipo'] ?? 'Sin tipo'}".toUpperCase(),
+                    textAlign: TextAlign.center, // Centra el texto si es largo
                     style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red),
+                      fontSize: 20, // Un poco más grande para que destaque
+                      fontWeight: FontWeight.w900, // Más negrita
+                      color: Colors.redAccent,
+                      height: 1.1, // Ajusta el espacio entre líneas
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const Divider(height: 30),
+            const Divider(height: 20, thickness: 1.2),
 
-            // 2. BARRIO Y DIRECCIÓN
+            // 2. DATOS DE UBICACIÓN Y CONTACTO
             _datoRenglon(Icons.home, "BARRIO", barrioMostrado),
             _datoRenglon(Icons.location_on, "DIRECCIÓN", direccionMostrada),
-
             _datoRenglon(Icons.phone, "TELÉFONO",
                 "${data['numerodecelular'] ?? 'Sin número'}"),
 
-            const Divider(height: 30),
+            const Divider(height: 20),
 
             // 3. DATOS DEL VECINO
             Center(
@@ -92,15 +99,13 @@ class ReclamoDetallePage extends StatelessWidget {
                     "${data['nombre'] ?? 'Sin nombre'}",
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                        fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 25),
-
-            // 4. DETALLES
+            const SizedBox(height: 20),
 
             // 4. DETALLES
             Center(
@@ -109,37 +114,41 @@ class ReclamoDetallePage extends StatelessWidget {
                   const Text("DETALLE:",
                       style: TextStyle(
                           fontWeight: FontWeight.bold, color: Colors.grey)),
-                  Text(
-                    // Lógica para cortar a 50 letras
-                    data['detalle'] != null &&
-                            data['detalle'].toString().length > 50
-                        ? "${data['detalle'].toString().substring(0, 50)}..."
-                        : "${data['detalle'] ?? 'Sin detalle'}",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Text(
+                      data['detalle'] ?? 'Sin detalle',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 18, fontStyle: FontStyle.italic),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
+
+            // 5. REGISTRO Y BOTÓN GPS
             _datoRenglon(Icons.access_time, "REGISTRADO EL", fechaHora),
-            const SizedBox(height: 30),
-            // 5. BOTÓN GPS
+
+            const SizedBox(height: 20),
+
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 55,
               child: ElevatedButton.icon(
                 onPressed: () => _abrirMapa(data['ubicacion'] as GeoPoint?),
-                icon: const Icon(Icons.navigation),
+                icon: const Icon(Icons.navigation, size: 24),
                 label: const Text("IR AL LUGAR (GPS)",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   foregroundColor: Colors.white,
                   elevation: 5,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(15)),
                 ),
               ),
             ),
@@ -149,22 +158,26 @@ class ReclamoDetallePage extends StatelessWidget {
     );
   }
 
-  Widget _datoRenglon(IconData icono, String etiqueta, String valor,
-      {Color color = Colors.black, double fontSize = 14}) {
+  Widget _datoRenglon(IconData icono, String etiqueta, String valor) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icono, size: 20, color: color),
-          const SizedBox(width: 10),
-          Text("$etiqueta: ",
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(
-            child: Text(
-              valor,
-              // AQUÍ ESTÁ EL CAMBIO:
-              style: TextStyle(color: color, fontSize: fontSize),
-            ),
+          Icon(icono, size: 22, color: Colors.black87),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(etiqueta,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Colors.grey)),
+              Text(valor,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500)),
+            ],
           ),
         ],
       ),
