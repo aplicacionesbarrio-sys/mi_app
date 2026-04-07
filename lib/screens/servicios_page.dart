@@ -1,11 +1,9 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 
@@ -23,11 +21,14 @@ class _ServiciosPageState extends State<ServiciosPage> {
   String cartelConfirmacion = "";
   Timer? timerDesmarcar;
   Map<String, bool> serviciosBloqueados = {};
+
+  // Variables que se muestran en la pantalla y se envían a gestión
   String nombreVecinoReal = "Cargando...";
   String telefonoVecinoReal = "...";
-  String domicilioVecinoReal = "...";
+  String barrioReal = "No especificado";
+  String domicilioReal = "No especificado";
 
-  // --- SECCIÓN: LISTADO DE OFICIOS (Tu Tablero de Control) ---
+  // --- LISTADO DE OFICIOS (MANTENGO TUS COLORES ORIGINALES) ---
   final List<Map<String, dynamic>> misOficios = [
     {
       "nombre": "Albañil",
@@ -35,7 +36,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 250, 251, 250),
       "colorPresionado": const Color(0xFF97786D),
       "colorIcono": const Color.fromARGB(255, 62, 26, 145),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Gomeria",
@@ -43,7 +44,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color(0xFFD75BDB),
       "colorIcono": const Color.fromARGB(255, 179, 165, 41),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Jardinero",
@@ -51,7 +52,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": Colors.green,
       "colorIcono": const Color.fromARGB(255, 163, 104, 104),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Plomero",
@@ -59,7 +60,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 75, 115, 176),
       "colorIcono": const Color.fromARGB(255, 186, 129, 37),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Electricista",
@@ -67,7 +68,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 214, 125, 77),
       "colorIcono": const Color.fromARGB(255, 38, 122, 137),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Gasista",
@@ -75,7 +76,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 206, 92, 92),
       "colorIcono": const Color.fromARGB(255, 21, 156, 25),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Cerrajero",
@@ -83,7 +84,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color(0xFFA59210),
       "colorIcono": const Color.fromARGB(221, 156, 31, 31),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Herrero",
@@ -91,7 +92,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 154, 96, 180),
       "colorIcono": const Color.fromARGB(255, 109, 15, 15),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Pintor",
@@ -99,7 +100,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 249, 248, 248),
       "colorPresionado": const Color.fromARGB(255, 151, 83, 120),
       "colorIcono": const Color.fromARGB(255, 37, 34, 187),
-      "colorLetra": Colors.black87,
+      "colorLetra": Colors.black87
     },
     {
       "nombre": "Otros",
@@ -107,7 +108,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       "colorBase": const Color.fromARGB(255, 252, 252, 252),
       "colorPresionado": const Color.fromARGB(221, 67, 44, 159),
       "colorIcono": const Color.fromARGB(255, 35, 29, 29),
-      "colorLetra": const Color.fromARGB(221, 16, 12, 12),
+      "colorLetra": const Color.fromARGB(221, 16, 12, 12)
     },
   ];
 
@@ -115,248 +116,120 @@ class _ServiciosPageState extends State<ServiciosPage> {
   void initState() {
     super.initState();
     _cargarEstadoBloqueos();
-
-    // Esperamos a que Auth esté listo antes de llamar a la función
-    FirebaseAuth.instance.authStateChanges().first.then((_) {
-      if (mounted) obtenerDatosUsuario();
-    });
+    obtenerDatosUsuario();
   }
 
   Future<void> obtenerDatosUsuario() async {
-    debugPrint("DEBUG: Iniciando Escudo A y B...");
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-
     try {
-      // 🛡️ Esperamos al usuario de Auth
-      User? user = await FirebaseAuth.instance
-          .authStateChanges()
-          .firstWhere((u) => u != null)
-          .timeout(const Duration(seconds: 5), onTimeout: () => null);
-
-      if (user == null) {
-        debugPrint("DEBUG: ⚠️ Auth sigue siendo NULL.");
-      } else {
-        debugPrint("DEBUG: ✅ USUARIO AUTH DETECTADO: ${user.uid}");
-      }
-
-      // --- 🚀 PLAN A: Firebase (Nube) ---
-      debugPrint("DEBUG: 🔍 Obteniendo ID del dispositivo...");
       String deviceIdOriginal = await _getDeviceId();
       String deviceIdLimpio = deviceIdOriginal;
-
-      // 🧠 EL IMÁN PARA EL ID (Solución de tu primo):
       final match = RegExp(r'(STAS[\w\.\-]+)').firstMatch(deviceIdOriginal);
-      if (match != null) {
-        deviceIdLimpio = match.group(0)!;
-      }
-
+      if (match != null) deviceIdLimpio = match.group(0)!;
       deviceIdLimpio = deviceIdLimpio.trim().toUpperCase();
 
-      debugPrint("DEBUG: 📱 ID ORIGINAL: [$deviceIdOriginal]");
-      debugPrint("DEBUG: 📱 ID LIMPIO: [$deviceIdLimpio]");
-
-      debugPrint("DEBUG: 🔎 Buscando en Firestore...");
       var query = await FirebaseFirestore.instance
           .collection('usuarios')
           .where('deviceId', isEqualTo: deviceIdLimpio)
           .limit(1)
           .get();
 
-      debugPrint("DEBUG: 📊 Documentos encontrados: ${query.docs.length}");
-
       if (query.docs.isNotEmpty && mounted) {
-        debugPrint("DEBUG: ✅ Documento encontrado con éxito.");
-        var userDoc = query.docs.first;
+        var userDoc = query.docs.first.data();
 
-        // 📝 RECUPERAMOS LOS DATOS (incluyendo el ROL del usuario)
         String n = userDoc['nombre'] ?? "Vecino";
         String t = userDoc['numerodecelular'] ?? "Sin Tel";
-        int rolUsuario = userDoc['rol'] ?? 3; // <--- AQUÍ RECUPERAMOS EL TIPO
+        String b = userDoc['barrio'] ?? "No especificado";
+        String d = userDoc['domicilio'] ?? "No especificado";
 
-        // Guardamos todo en memoria local para que no se pierda
+        // Guardamos en memoria local
         await prefs.setString('nombre_local', n);
         await prefs.setString('tel_local', t);
+        await prefs.setString('barrio_local', b);
+        await prefs.setString('domicilio_local', d);
 
         setState(() {
           nombreVecinoReal = n;
           telefonoVecinoReal = t;
-          // Si tenés una variable tipoServicioReal en el estado, la actualizamos:
-          // tipoServicioReal = tipoServicio;
+          barrioReal = b;
+          domicilioReal = d;
         });
-
-        debugPrint("DEBUG: 📦 Datos cargados -> Nombre: $n, Rol: $rolUsuario");
         return;
-      } else {
-        debugPrint("DEBUG: ❌ No hubo coincidencia con [$deviceIdLimpio]");
-      }
-
-      // --- 🔄 BÚSQUEDA SECUNDARIA (Por UID si falla el DeviceID) ---
-      if (user != null) {
-        DocumentSnapshot userDocUid = await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(user.uid)
-            .get();
-
-        if (userDocUid.exists && mounted) {
-          String n = userDocUid['nombre'] ?? "Vecino";
-          String t = userDocUid['numerodecelular'] ?? "Sin Tel";
-
-          await prefs.setString('nombre_local', n);
-          await prefs.setString('tel_local', t);
-
-          setState(() {
-            nombreVecinoReal = n;
-            telefonoVecinoReal = t;
-          });
-          return;
-        }
       }
     } catch (e) {
-      debugPrint("DEBUG: 🔥 Error crítico: $e");
+      debugPrint("Error: $e");
     }
 
-    // --- 💾 PLAN B: Memoria (Usa lo último guardado) ---
-    String? nLocal = prefs.getString('nombre_local');
-    if (nLocal != null && mounted) {
-      debugPrint("DEBUG: 💾 Usando Plan B (Cache): $nLocal");
+    if (mounted) {
       setState(() {
-        nombreVecinoReal = nLocal;
+        nombreVecinoReal = prefs.getString('nombre_local') ?? "Vecino";
         telefonoVecinoReal = prefs.getString('tel_local') ?? "Sin Tel";
+        barrioReal = prefs.getString('barrio_local') ?? "No especificado";
+        domicilioReal = prefs.getString('domicilio_local') ?? "No especificado";
       });
     }
   }
 
-// --- HERRAMIENTA PARA EL ID DEL CELULAR ---
   Future<String> _getDeviceId() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      // Esto genera el código que vimos en la terminal (modelo + id)
       return androidInfo.model + androidInfo.id;
-    } else if (Platform.isIOS) {
+    } else {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
       return iosInfo.identifierForVendor ?? "unknown_ios";
     }
-    return "unknown_platform";
-  }
-
-  Future<void> _cargarEstadoBloqueos() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    DateTime ahora = DateTime.now();
-    setState(() {
-      for (var oficio in misOficios) {
-        String nombre = oficio['nombre'];
-        String? fechaStr = prefs.getString("fecha_servicio_$nombre");
-        if (fechaStr != null) {
-          DateTime fechaGuardada = DateTime.parse(fechaStr);
-          if (ahora.difference(fechaGuardada).inMinutes < 2) {
-            // duracion de desbloqueo p3 igual que 155
-            serviciosBloqueados[nombre] = true;
-          } else {
-            serviciosBloqueados[nombre] = false;
-            prefs.remove("fecha_servicio_$nombre");
-          }
-        }
-      }
-    });
-  }
-
-  void _mostrarPlanCManual() {
-    TextEditingController nombreCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text("Identificación Necesaria"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("No pudimos recuperar tu nombre automáticamente."),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nombreCtrl,
-              decoration:
-                  const InputDecoration(hintText: "Tu Nombre y Apellido"),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              if (nombreCtrl.text.trim().isNotEmpty) {
-                setState(() {
-                  nombreVecinoReal = nombreCtrl.text.trim();
-                });
-                Navigator.pop(context);
-                enviarPedido(); // Reintenta enviar con el nombre manual
-              }
-            },
-            child: const Text("CONFIRMAR Y ENVIAR"),
-          ),
-        ],
-      ),
-    );
   }
 
   void enviarPedido() async {
-    if (nombreVecinoReal == "..." || nombreVecinoReal == "Cargando...") {
-      _mostrarPlanCManual();
-      return;
-    }
     if (servicioSeleccionado.isEmpty || enviando) return;
+
     setState(() {
       enviando = true;
       cartelConfirmacion = "Solicitud de $servicioSeleccionado enviada";
     });
+
     try {
       Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
-      // 1. Hace vibrar el celu
-      if (await Vibration.hasVibrator()) {
-        Vibration.vibrate(duration: 500);
-      }
-      // 2. Envío a Firebase (Ahora sí va a reconocer 'position')
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+
+      // Reparación de la vibración (Error naranja corregido)
+      bool canVibrate = await Vibration.hasVibrator() ?? false;
+      if (canVibrate) Vibration.vibrate(duration: 500);
+
+      // Envío a Firebase con etiquetas exactas para el Tablero de Gestión
       await FirebaseFirestore.instance.collection('servicios').add({
         'tipo': servicioSeleccionado,
-        'nombre': nombreVecinoReal, // Usamos la misma variable que en Inicio
-        'numerodecelular': telefonoVecinoReal, // Usamos la misma que en Inicio
+        'nombre': nombreVecinoReal,
+        'numerodecelular': telefonoVecinoReal,
+        'barrio': barrioReal,
+        'domicilio': domicilioReal,
         'fecha': FieldValue.serverTimestamp(),
         'ubicacion': GeoPoint(position.latitude, position.longitude),
         'estado': 'pendiente',
       });
 
-      setState(() {
-        serviciosBloqueados[servicioSeleccionado] = true;
-      });
+      if (mounted) {
+        setState(() => serviciosBloqueados[servicioSeleccionado] = true);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString("fecha_servicio_$servicioSeleccionado",
+            DateTime.now().toIso8601String());
+      }
     } catch (e) {
-      debugPrint("Error: $e");
-    }
-
-    Timer(const Duration(seconds: 10), () {
-      // cartel verde de arriba
-      if (mounted) setState(() => cartelConfirmacion = "");
-    });
-
-    // 1. Creamos una copia fija del nombre actual
-    String nombreParaDesbloquear = servicioSeleccionado;
-
-    Timer(const Duration(minutes: 2), () {
-      // duracion de desbloqueo p3 igual que 121
+      debugPrint("Error al enviar: $e");
+    } finally {
       if (mounted) {
         setState(() {
-          serviciosBloqueados[nombreParaDesbloquear] = false;
+          enviando = false;
+          servicioSeleccionado = "";
+        });
+        Timer(const Duration(seconds: 8), () {
+          if (mounted) setState(() => cartelConfirmacion = "");
         });
       }
-    });
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString("fecha_servicio_$servicioSeleccionado",
-        DateTime.now().toIso8601String());
-
-    setState(() {
-      enviando = false;
-      servicioSeleccionado = "";
-    });
+    }
   }
 
   void _iniciarTemporizador() {
@@ -364,6 +237,21 @@ class _ServiciosPageState extends State<ServiciosPage> {
     timerDesmarcar = Timer(const Duration(seconds: 15), () {
       if (mounted) setState(() => servicioSeleccionado = "");
     });
+  }
+
+  Future<void> _cargarEstadoBloqueos() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    DateTime ahora = DateTime.now();
+    for (var oficio in misOficios) {
+      String nombre = oficio['nombre'];
+      String? fechaStr = prefs.getString("fecha_servicio_$nombre");
+      if (fechaStr != null) {
+        DateTime fechaGuardada = DateTime.parse(fechaStr);
+        if (ahora.difference(fechaGuardada).inMinutes < 2) {
+          setState(() => serviciosBloqueados[nombre] = true);
+        }
+      }
+    }
   }
 
   @override
@@ -417,44 +305,34 @@ class _ServiciosPageState extends State<ServiciosPage> {
                               },
                         child: Container(
                           decoration: BoxDecoration(
-                            // USA LOS COLORES DE TU LISTA
                             color: estaBloqueado
                                 ? Colors.grey.shade400
                                 : (estaSeleccionado
                                     ? misOficios[index]['colorPresionado']
                                     : misOficios[index]['colorBase']),
-
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: estaSeleccionado
-                                  ? Colors.black
-                                  : Colors.white.withOpacity(0.3),
-                              width: 2,
-                            ),
+                                color: estaSeleccionado
+                                    ? Colors.black
+                                    : Colors.white.withOpacity(0.3),
+                                width: 2),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                misOficios[index]['icono'],
-                                size: 35, // tamaño icono p3
-                                // USA EL COLOR DE ICONO DE TU LISTA
-                                color: estaBloqueado
-                                    ? Colors.grey
-                                    : misOficios[index]['colorIcono'],
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                nombre,
-                                style: TextStyle(
-                                  fontSize: 16, // tamaño letro botones serv p3
-                                  fontWeight: FontWeight.bold,
-                                  // USA EL COLOR DE LETRA DE TU LISTA
+                              Icon(misOficios[index]['icono'],
+                                  size: 35,
                                   color: estaBloqueado
                                       ? Colors.grey
-                                      : misOficios[index]['colorLetra'],
-                                ),
-                              ),
+                                      : misOficios[index]['colorIcono']),
+                              const SizedBox(width: 8),
+                              Text(nombre,
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: estaBloqueado
+                                          ? Colors.grey
+                                          : misOficios[index]['colorLetra'])),
                             ],
                           ),
                         ),
@@ -463,7 +341,6 @@ class _ServiciosPageState extends State<ServiciosPage> {
                   ),
                 ),
               ),
-              // --- BOTÓN ENVIAR ---
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: SizedBox(
@@ -473,13 +350,12 @@ class _ServiciosPageState extends State<ServiciosPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade700,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade400,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15)),
                     ),
                     onPressed: servicioSeleccionado.isEmpty ||
                             enviando ||
-                            nombreVecinoReal == "..."
+                            nombreVecinoReal == "Cargando..."
                         ? null
                         : enviarPedido,
                     child: Text(enviando ? "ENVIANDO..." : "ENVIAR PEDIDO",
@@ -490,25 +366,17 @@ class _ServiciosPageState extends State<ServiciosPage> {
               ),
             ],
           ),
-          // --- CARTEL DE CONFIRMACIÓN (Este no lo tocamos) ---
           if (cartelConfirmacion.isNotEmpty)
             Positioned(
               top: 15,
               left: 20,
               right: 20,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
+                padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.green.shade400, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4))
-                  ],
                 ),
                 child: Row(
                   children: [

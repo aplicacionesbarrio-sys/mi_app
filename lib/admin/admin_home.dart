@@ -37,8 +37,15 @@ class AdminHomePage extends StatelessWidget {
             query: FirebaseFirestore.instance
                 .collection('alertas')
                 .where('estado', isEqualTo: 'activa'),
-            onTap: () => debugPrint("Navegar a SeguridadPage"),
-            // onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SeguridadPage())),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const TablerosAdmin(categoriaInicial: 'alertas'),
+                ),
+              );
+            },
           ),
 
           // 2. GESTIÓN DE RECLAMOS
@@ -57,7 +64,10 @@ class AdminHomePage extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const TablerosAdmin()),
+                MaterialPageRoute(
+                  builder: (context) => const TablerosAdmin(
+                      categoriaInicial: 'reclamos'), // Agregamos const aquí
+                ),
               );
             },
           ),
@@ -73,7 +83,15 @@ class AdminHomePage extends StatelessWidget {
             activeColor: Colors.orange.shade900,
             iconColor: Colors.orange,
             query: FirebaseFirestore.instance.collection('servicios'),
-            onTap: () => debugPrint("Navegar a AdminServiciosPage"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const TablerosAdmin(categoriaInicial: 'servicios'),
+                ),
+              );
+            },
           ),
 
           // 4. ESTADÍSTICAS RÁPIDAS

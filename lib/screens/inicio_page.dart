@@ -88,20 +88,25 @@ class _InicioPageState extends State<InicioPage> {
           );
         } else {
           debugPrint("✅ Usuario persistente. Se queda en inicio.");
-          setState(() {
-            domicilioReal = datos['domicilio'] ?? "";
-            nombreVecinoReal = datos['nombre'] ?? "Sin nombre";
-            barrioReal = datos['barrio'] ?? "Sin barrio";
-            telefonoVecinoReal = datos['numerodecelular'] ?? "...";
-            cargando = false;
-          });
+          if (mounted) {
+            setState(() {
+              domicilioReal = datos['domicilio'] ?? "";
+              nombreVecinoReal = datos['nombre'] ?? "Sin nombre";
+              barrioReal = datos['barrio'] ?? "Sin barrio";
+              telefonoVecinoReal = datos['numerodecelular'] ?? "...";
+              cargando = false;
+            });
+          }
         }
       }
     } else {
       if (!mounted) return;
-      setState(() {
-        cargando = false;
-      });
+      {
+        // <--- AGREGAR ESTA LÍNEA
+        setState(() {
+          cargando = false;
+        });
+      }
     }
   }
 
@@ -117,10 +122,13 @@ class _InicioPageState extends State<InicioPage> {
         Position position = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high);
 
-        setState(() {
-          lat = position.latitude;
-          lng = position.longitude;
-        });
+        if (mounted) {
+          // <--- AGREGAR ESTA LÍNEA
+          setState(() {
+            lat = position.latitude;
+            lng = position.longitude;
+          });
+        }
         debugPrint("📍 Ubicación lista: $lat, $lng");
       }
     } catch (e) {
