@@ -1,6 +1,6 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.barriovigilado.barriouroseguro">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" 
+    package="com.barriovigilado.barriouroseguro">
 
-    <!-- PERMISOS -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
@@ -12,6 +12,8 @@
         android:label="Barrio Seguro"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
+
+        <meta-data android:name="flutterEmbedding" android:value="2"/>
 
         <activity
             android:name=".MainActivity"
@@ -32,17 +34,11 @@
             </intent-filter>
         </activity>
 
-        <!-- GOOGLE MAPS API KEY -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyD-l2IlOxYzNL5CVlPj-E6YIa01bKmlWS4"/>
-
-        <meta-data
-            android:name="flutterEmbedding"
-            android:value="2"/>
     </application>
 
-    <!-- ABRIR MAPS Y TELÉFONO -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW"/>
@@ -55,6 +51,14 @@
         <intent>
             <action android:name="android.intent.action.DIAL"/>
             <data android:scheme="tel"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="whatsapp" />
         </intent>
     </queries>
 

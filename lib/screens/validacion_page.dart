@@ -22,7 +22,6 @@ class _ValidacionPageState extends State<ValidacionPage> {
       return;
     }
 
-    // Cerramos el teclado para mejorar la UI
     FocusScope.of(context).unfocus();
     setState(() => _cargando = true);
 
@@ -43,22 +42,20 @@ class _ValidacionPageState extends State<ValidacionPage> {
           .get();
 
       if (doc.exists && doc.data()?['codigoActivacion'] == codigo) {
-        // 1. Actualización en Firebase
-        await doc.reference.update({'estado': 'validado'});
+        await doc.reference.update({
+          'estado': 'validado',
+          'codigoValidado': true,
+        });
 
-        // 2. Persistencia Local
         await prefs.setBool('codigoValidado', true);
         await prefs.setString('estado_usuario', 'validado');
 
-        debugPrint("✅ Código validado y guardado localmente.");
-
         if (!mounted) return;
 
-        // 3. Navegación limpia
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const InicioPage()),
-          (route) => false, // No se puede volver atrás a la validación
+          (route) => false,
         );
       } else {
         if (!mounted) return;
@@ -66,7 +63,6 @@ class _ValidacionPageState extends State<ValidacionPage> {
             isError: true);
       }
     } catch (e) {
-      debugPrint("Error de Firebase: $e");
       _mostrarSnackBar("Error de conexión. Intentá de nuevo.");
     } finally {
       if (mounted) setState(() => _cargando = false);
@@ -86,7 +82,7 @@ class _ValidacionPageState extends State<ValidacionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFE0F7FA), // El celeste de fondo de tu app
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -95,49 +91,51 @@ class _ValidacionPageState extends State<ValidacionPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.verified_user_outlined,
-                    size: 80, color: Colors.blue),
+                    size: 80, color: Color(0xFF007BFF)),
                 const SizedBox(height: 20),
                 const Text(
-                  "Validación",
+                  "VALIDACIÓN",
                   style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue),
+                      color: Color(0xFF007BFF)), // Azul de tu AppBar
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   "Ingresá el código de 6 dígitos enviado por el administrador.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                  style: TextStyle(color: Colors.black54, fontSize: 16),
                 ),
                 const SizedBox(height: 40),
 
-                // Input de código con estilo moderno
+                // --- AQUÍ PEGAMOS TU NUEVO DISEÑO ---
                 TextField(
                   controller: _codigoController,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 40,
-                      letterSpacing: 15,
+                      fontSize: 42,
+                      letterSpacing: 10,
                       fontWeight: FontWeight.w900,
-                      color: Colors.blueAccent),
+                      color: Color(0xFF007BFF)),
                   decoration: InputDecoration(
                     counterText: "",
                     hintText: "000000",
                     hintStyle: TextStyle(
-                        color: Colors.grey.withOpacity(0.3), letterSpacing: 15),
+                        color: Colors.grey.withOpacity(0.3), letterSpacing: 10),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
-                      borderSide:
-                          const BorderSide(color: Colors.blue, width: 2),
+                      borderSide: const BorderSide(
+                          color: Color(0xFF00BFFF), width: 1.5),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                       borderSide:
-                          const BorderSide(color: Colors.blueAccent, width: 3),
+                          const BorderSide(color: Color(0xFF007BFF), width: 3),
                     ),
+                    filled: true,
+                    fillColor: Colors.white,
                   ),
                 ),
 
@@ -148,28 +146,38 @@ class _ValidacionPageState extends State<ValidacionPage> {
                   height: 55,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: const Color(0xFF007BFF),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15)),
-                      elevation: 5,
+                      elevation: 4,
                     ),
                     onPressed: _cargando ? null : _verificarCodigo,
                     child: _cargando
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "ACTIVAR CUENTA",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold),
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle_outline,
+                                  color: Colors.white),
+                              SizedBox(width: 10),
+                              Text(
+                                "ACTIVAR MI CUENTA",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
                           ),
                   ),
                 ),
+                // --- FIN DEL NUEVO DISEÑO ---
+
                 const SizedBox(height: 20),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Volver al registro",
-                      style: TextStyle(color: Colors.grey)),
+                      style: TextStyle(color: Color(0xFF007BFF))),
                 )
               ],
             ),

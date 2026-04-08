@@ -116,7 +116,15 @@ class AdminHomePage extends StatelessWidget {
             activeColor: Colors.purple.shade800,
             iconColor: Colors.purple,
             query: FirebaseFirestore.instance.collection('usuarios'),
-            onTap: () => debugPrint("Abrir Fábrica"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const TablerosAdmin(categoriaInicial: 'usuarios'),
+                ),
+              );
+            },
           ),
 
           // 6. CONTROL DE PAGOS
