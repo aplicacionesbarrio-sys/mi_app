@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 // ---------------------------------------------------------
-// 1. EL MOLDE CUADRADO (Para la Grilla de la Pantalla Principal)
+// 1. EL MOLDE CUADRADO (Pantalla Principal / Home)
 // ---------------------------------------------------------
 class BotonAlerta extends StatelessWidget {
   final String texto;
@@ -9,7 +10,7 @@ class BotonAlerta extends StatelessWidget {
   final IconData? icono;
   final Color colorFondo;
   final VoidCallback accion;
-  final bool estaSeleccionado; // Mantenemos la variable para el cambio de color
+  final bool estaSeleccionado;
 
   const BotonAlerta({
     super.key,
@@ -18,48 +19,62 @@ class BotonAlerta extends StatelessWidget {
     this.icono,
     required this.colorFondo,
     required this.accion,
-    this.estaSeleccionado =
-        false, // <--- IMPORTANTE: Al ser false por defecto, no da error en otras pantallas
+    this.estaSeleccionado = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: colorFondo, // Ahora usará el color que mandamos desde main.dart
-      borderRadius: BorderRadius.circular(15),
-      elevation: 3,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: accion,
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: rutaImagen != null
-                      ? Image.asset(rutaImagen!,
-                          height: 50, fit: BoxFit.contain)
-                      : Icon(icono,
-                          size: 50,
-                          color:
-                              estaSeleccionado ? Colors.white : Colors.black),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: colorFondo,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            HapticFeedback.mediumImpact(); // 📳 Vibración táctil
+            accion();
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Center(
+                    child: rutaImagen != null
+                        ? Image.asset(rutaImagen!, fit: BoxFit.contain)
+                        : Icon(icono,
+                            size: 45,
+                            color: estaSeleccionado
+                                ? Colors.white
+                                : Colors.black87),
+                  ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                texto,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: estaSeleccionado ? Colors.white : Colors.black,
+                const SizedBox(height: 8),
+                Text(
+                  texto,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight:
+                        FontWeight.w900, // Fuente más pesada para legibilidad
+                    color: estaSeleccionado ? Colors.white : Colors.black87,
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -67,7 +82,7 @@ class BotonAlerta extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 2. EL MOLDE ANCHO (Para Reclamos / Segunda Pantalla)
+// 2. EL MOLDE ANCHO (Listados / Reclamos / Servicios)
 // ---------------------------------------------------------
 class BotonAlertaPro extends StatelessWidget {
   final String texto;
@@ -89,50 +104,51 @@ class BotonAlertaPro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 60, // Altura para que entre la flecha de la pág 3
-      margin: const EdgeInsets.symmetric(vertical: 5),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Material(
         color: colorFondo,
         borderRadius: BorderRadius.circular(15),
-        elevation: 3,
+        elevation: estaSeleccionado ? 6 : 2,
         child: InkWell(
           borderRadius: BorderRadius.circular(15),
-          onTap: accion,
-          child: Stack(
-            // 👈 Stack nos permite encimar cosas
-            alignment: Alignment.center, // 👈 Centra todo lo que esté adentro
-            children: [
-              // 1. EL ICONO ANCLADO A LA IZQUIERDA
-              Positioned(
-                left: 20, // Distancia desde el borde izquierdo
-                child: Icon(
-                  icono,
-                  size: 30,
-                  color: iconoColor,
-                ),
-              ),
+          onTap: () {
+            HapticFeedback.lightImpact();
+            accion();
+          },
+          child: Container(
+            height: 70, // Un poco más alto para comodidad del pulgar
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                // Ícono dinámico
+                Icon(icono,
+                    size: 28,
+                    color: estaSeleccionado ? Colors.white : iconoColor),
 
-              // 2. EL TEXTO TOTALMENTE CENTRADO
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal:
-                        60), // Margen para que el texto largo no pise el icono
-                child: Text(
-                  texto.toUpperCase(),
-                  textAlign:
-                      TextAlign.center, // Texto centrado en su propio bloque
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: estaSeleccionado ? Colors.white : Colors.black87,
+                // Espacio dinámico para que el texto esté centrado pero respete al ícono
+                const SizedBox(width: 15),
+
+                Expanded(
+                  child: Text(
+                    texto.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      letterSpacing: 0.5,
+                      fontWeight: FontWeight.bold,
+                      color: estaSeleccionado ? Colors.white : Colors.black87,
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+
+                // Flecha indicadora (opcional, da feedback visual de que es clickeable)
+                Icon(Icons.arrow_forward_ios,
+                    size: 14,
+                    color:
+                        estaSeleccionado ? Colors.white54 : Colors.grey[400]),
+              ],
+            ),
           ),
         ),
       ),

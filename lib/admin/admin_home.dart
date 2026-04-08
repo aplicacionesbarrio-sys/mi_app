@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/tableros_admin.dart';
 
-// Importa aquí tus páginas para que la navegación funcione
-// import 'package:tu_app/pages/seguridad_page.dart';
-// import 'package:tu_app/pages/reclamos_page.dart';
-// import 'package:tu_app/pages/admin_servicios_page.dart';
-
 class AdminHomePage extends StatelessWidget {
   const AdminHomePage({super.key});
 
@@ -65,8 +60,8 @@ class AdminHomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const TablerosAdmin(
-                      categoriaInicial: 'reclamos'), // Agregamos const aquí
+                  builder: (context) =>
+                      const TablerosAdmin(categoriaInicial: 'reclamos'),
                 ),
               );
             },
@@ -144,7 +139,7 @@ class AdminHomePage extends StatelessWidget {
     );
   }
 
-  // --- WIDGET DE TARJETA CON DETECCIÓN DE TOQUE MEJORADA ---
+  // --- WIDGET DE TARJETA CON BLINDAJE ANTI-ERRORES ---
   Widget _buildSmartCard(
     BuildContext context, {
     required String title,
@@ -160,106 +155,150 @@ class AdminHomePage extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: query.snapshots(),
       builder: (context, snapshot) {
-        int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+        // 🛡️ BLINDAJE: Manejo de errores de conexión o permisos
+        if (snapshot.hasError) {
+          return const SizedBox
+              .shrink(); // Si hay error, la tarjeta se oculta para no romper la UI
+        }
+
+        // 🛡️ BLINDAJE: Mientras carga, mostramos la tarjeta en modo "base" pero sin datos
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _cardLayout(
+            hasData: false,
+            count: 0,
+            title: title,
+            subtitleNormal: "Cargando...",
+            subtitleAlert: "",
+            icon: icon,
+            baseColor: baseColor,
+            activeColor: activeColor,
+            iconColor: iconColor.withOpacity(0.3),
+            onTap: () {},
+          );
+        }
+
+        // 🛡️ BLINDAJE: Aseguramos que data no sea nulo antes de contar
+        int count = (snapshot.hasData && snapshot.data != null)
+            ? snapshot.data!.docs.length
+            : 0;
         bool hasData = count > 0;
 
-        return GestureDetector(
-          onTap: onTap, // El toque ahora envuelve TODA la tarjeta
-          behavior: HitTestBehavior
-              .opaque, // Asegura que detecte el toque incluso en espacios vacíos
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            height: 110,
-            decoration: BoxDecoration(
-              color: hasData ? activeColor : baseColor,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                // Contenido visual
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Center(
-                    child: Row(
-                      children: [
-                        Icon(
-                          icon,
-                          size: 45,
-                          color: hasData ? Colors.white : iconColor,
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      hasData ? Colors.white : Colors.black87,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                hasData
-                                    ? "$count $subtitleAlert"
-                                    : subtitleNormal,
-                                style: TextStyle(
-                                  color:
-                                      hasData ? Colors.white70 : Colors.black54,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Círculo de notificación (Badge)
-                if (hasData)
-                  Positioned(
-                    top: 10,
-                    right: 15,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      constraints:
-                          const BoxConstraints(minWidth: 30, minHeight: 30),
-                      child: Center(
-                        child: Text(
-                          '$count',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+        return _cardLayout(
+          hasData: hasData,
+          count: count,
+          title: title,
+          subtitleNormal: subtitleNormal,
+          subtitleAlert: subtitleAlert,
+          icon: icon,
+          baseColor: baseColor,
+          activeColor: activeColor,
+          iconColor: iconColor,
+          onTap: onTap,
         );
       },
+    );
+  }
+
+  // 🛡️ BLINDAJE: Separamos el diseño para que sea más fácil de mantener y no se repita lógica
+  Widget _cardLayout({
+    required bool hasData,
+    required int count,
+    required String title,
+    required String subtitleNormal,
+    required String subtitleAlert,
+    required IconData icon,
+    required Color baseColor,
+    required Color activeColor,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        height: 110,
+        decoration: BoxDecoration(
+          color: hasData ? activeColor : baseColor,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Center(
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: 45,
+                      color: hasData ? Colors.white : iconColor,
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: hasData ? Colors.white : Colors.black87,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            hasData ? "$count $subtitleAlert" : subtitleNormal,
+                            style: TextStyle(
+                              color: hasData ? Colors.white70 : Colors.black54,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (hasData)
+              Positioned(
+                top: 10,
+                right: 15,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  constraints:
+                      const BoxConstraints(minWidth: 30, minHeight: 30),
+                  child: Center(
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

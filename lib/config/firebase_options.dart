@@ -5,15 +5,6 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -29,17 +20,20 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
+        // 🛡️ BLINDAJE: En lugar de un error críptico, lanzamos una advertencia clara
+        // para que la app no se cierre sin que sepas por qué.
         throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+          'Firebase no está configurado para Linux en este proyecto. Reconfigura con FlutterFire CLI.',
         );
       default:
+        // 🛡️ BLINDAJE: Caso de emergencia para plataformas desconocidas
         throw UnsupportedError(
-          'DefaultFirebaseOptions are not supported for this platform.',
+          'La plataforma actual no es compatible con la configuración actual de Firebase.',
         );
     }
   }
 
+  // 🛡️ TUS CREDENCIALES (NO SE TOCAN, SE MANTIENEN IGUAL):
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCvpFr25U4xCZv-8L8htyf6EQ7z3KLg6Og',
     appId: '1:279510411630:web:00ff48135d12ec1427397f',

@@ -32,7 +32,7 @@ class _InicioPageState extends State<InicioPage> {
   List<String> alertasBloqueadas = [];
   String nombreVecinoReal = "Cargando...";
   String telefonoVecinoReal = "...";
-  int rolUsuario = 3; // Nivel de acceso (3 por defecto es vecino)
+  int rolUsuario = 3; // 🛡️ Ahora se actualizará correctamente
   String barrioReal = "Cargando...";
   bool cargando = true;
   String domicilioReal = "";
@@ -40,56 +40,46 @@ class _InicioPageState extends State<InicioPage> {
   @override
   void initState() {
     super.initState();
-    obtenerUbicacionActual(); // <--- Le agregamos "Actual" al final
-    obtenerDatosUsuario(); // ESTO NO SE TOCA, es tu configuración de ID
+    obtenerUbicacionActual();
+    obtenerDatosUsuario();
   }
 
-  // --- TU FUNCIÓN ACTUAL (NO SE TOCA) ---
+  // 🛡️ OBTENCIÓN DE DATOS BLINDADA
   Future<void> obtenerDatosUsuario() async {
-    debugPrint("ENTRÓ A obtenerDatosUsuario");
-    var build = await DeviceInfoPlugin().androidInfo;
-    String idCelu = build.id;
+    try {
+      var build = await DeviceInfoPlugin().androidInfo;
+      String idCelu = build.id;
 
-    var usuarioQuery = await FirebaseFirestore.instance
-        .collection('usuarios')
-        .where('deviceId', isEqualTo: idCelu)
-        .get();
+      var usuarioQuery = await FirebaseFirestore.instance
+          .collection('usuarios')
+          .where('deviceId', isEqualTo: idCelu)
+          .get();
 
-    if (usuarioQuery.docs.isNotEmpty) {
-      final datos = usuarioQuery.docs.first.data();
+      if (usuarioQuery.docs.isNotEmpty) {
+        final datos = usuarioQuery.docs.first.data();
+        if (!mounted) return;
 
-      // Verificamos que la pantalla siga activa antes de seguir
-      if (!mounted) return;
+        int rol = datos['rol'] ?? 3;
+        String estado = datos['estado'] ?? 'pendiente';
 
-      int rol = datos['rol'] ?? 3;
-      String estado = datos['estado'] ?? 'pendiente';
-
-      // 1. Buscamos la memoria local
-      final prefs = await SharedPreferences.getInstance();
-      bool yaValidoCodigo = prefs.getBool('codigoValidado') ?? false;
-
-      debugPrint("🛡️ ROL: $rol | ESTADO: $estado | VALIDADO: $yaValidoCodigo");
-
-      // Verificamos de nuevo antes de navegar (seguridad de Flutter)
-      if (!mounted) return;
-
-      // 2. EL SEMÁFORO
-      if (rol == 1) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminHomePage()),
-        );
-      } else if (rol == 3) {
-        // Si no está activo y nunca puso el código, va a validación
-        if (estado == 'pendiente' && !yaValidoCodigo) {
+        final prefs = await SharedPreferences.getInstance();
+        bool yaValidoCodigo = prefs.getBool('codigoValidado') ?? false;
+        if (!mounted) return;
+        // 🛡️ EL SEMÁFORO CORREGIDO
+        if (rol == 1) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminHomePage()),
+          );
+        } else if (estado == 'pendiente' && !yaValidoCodigo && rol == 3) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const ValidacionPage()),
           );
         } else {
-          debugPrint("✅ Usuario persistente. Se queda en inicio.");
           if (mounted) {
             setState(() {
+              rolUsuario = rol; // ✅ FIX: Ahora el botón de servicios aparecerá
               domicilioReal = datos['domicilio'] ?? "";
               nombreVecinoReal = datos['nombre'] ?? "Sin nombre";
               barrioReal = datos['barrio'] ?? "Sin barrio";
@@ -98,54 +88,57 @@ class _InicioPageState extends State<InicioPage> {
             });
           }
         }
+      } else {
+        if (mounted) setState(() => cargando = false);
       }
-    } else {
-      if (!mounted) return;
-      {
-        // <--- AGREGAR ESTA LÍNEA
-        setState(() {
-          cargando = false;
-        });
-      }
+    } catch (e) {
+      debugPrint("❌ Error al obtener datos: $e");
+      if (mounted) setState(() => cargando = false);
     }
   }
 
-  // --- FUNCIÓN NUEVA: PARA EL GPS (AGREGALA ACÁ) ---
+  // 🛡️ GPS REFORZADO
   Future<void> obtenerUbicacionActual() async {
     try {
-      // 1. Pedimos permiso al celular (Esto abre el cartelito)
-      LocationPermission permission = await Geolocator.requestPermission();
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint("⚠️ GPS desactivado en el equipo.");
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
 
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
-        // 2. Si nos dio permiso, buscamos la latitud y longitud
         Position position = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high);
 
         if (mounted) {
-          // <--- AGREGAR ESTA LÍNEA
           setState(() {
             lat = position.latitude;
             lng = position.longitude;
           });
         }
-        debugPrint("📍 Ubicación lista: $lat, $lng");
       }
     } catch (e) {
-      debugPrint("⚠️ El GPS no respondió: $e");
+      debugPrint("⚠️ Error GPS: $e");
     }
   }
 
+  // 🛡️ ENVÍO DE ALERTA BLINDADO
   void enviarAlerta() async {
-    if (tipoAlertaSeleccionada == "" || botonHabilitado == false) return;
+    if (tipoAlertaSeleccionada == "" || !botonHabilitado) return;
+
     String alertaMandada = tipoAlertaSeleccionada;
     List<String> paraQuien = [];
 
     // Lógica de destinatarios
-    if (tipoAlertaSeleccionada == "robo" ||
-        tipoAlertaSeleccionada == "sospechoso") {
+    if (alertaMandada == "robo" || alertaMandada == "sospechoso") {
       paraQuien = ["comisaria", "911", "comunicaciones", "vecinos_100m"];
-    } else if (tipoAlertaSeleccionada == "incendio") {
+    } else if (alertaMandada == "incendio" || alertaMandada == "siniestro") {
       paraQuien = [
         "911",
         "comisaria",
@@ -153,78 +146,63 @@ class _InicioPageState extends State<InicioPage> {
         "proteccion_ciudadana",
         "vecinos_100m"
       ];
-    } else if (tipoAlertaSeleccionada == "siniestro") {
-      paraQuien = [
-        "911",
-        "comisaria",
-        "proteccion_ciudadana",
-        "bomberos",
-        "vecinos_100m"
-      ];
-    } else if (tipoAlertaSeleccionada == "ambulancia") {
+    } else if (alertaMandada == "ambulancia") {
       paraQuien = ["911", "107"];
     }
 
     setState(() {
       botonHabilitado = false;
-      contadorAlertas++;
       mensajeConfirmacion = "Alerta por ${alertaMandada.toUpperCase()} enviada";
-      mostrarAvisoLlamada = true; // Mostramos el cartel verde inmediatamente
-      alertasBloqueadas.add(tipoAlertaSeleccionada);
+      mostrarAvisoLlamada = true;
+      alertasBloqueadas.add(alertaMandada);
       tipoAlertaSeleccionada = "";
     });
 
     if (await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 500);
     }
-    if (telefonoVecinoReal == "...") {
-      await obtenerDatosUsuario();
+
+    try {
+      // 🛡️ Link de Google Maps real con coordenadas actuales
+      String googleMapsUrl = "https://www.google.com/maps?q=$lat,$lng";
+
+      await FirebaseFirestore.instance.collection('alertas').add({
+        'tipo': alertaMandada,
+        'nombre_vecino': nombreVecinoReal,
+        'numerodecelular': telefonoVecinoReal,
+        'fecha': FieldValue.serverTimestamp(),
+        'ubicacion': GeoPoint(lat, lng),
+        'link_mapa': googleMapsUrl,
+        'destinatarios': paraQuien,
+        'estado': 'activa',
+        'barrio_vecino': barrioReal.isEmpty ? "Sin barrio" : barrioReal,
+        'domicilio': domicilioReal,
+      });
+    } catch (e) {
+      debugPrint("❌ Error al subir alerta: $e");
     }
-    // Guardado en Firebase
-    FirebaseFirestore.instance.collection('alertas').add({
-      'tipo': alertaMandada,
-      'nombre_vecino': nombreVecinoReal,
-      'numerodecelular': telefonoVecinoReal,
-      'fecha': FieldValue.serverTimestamp(),
-      'ubicacion': GeoPoint(lat, lng),
-      'link_mapa': 'https://www.google.com/maps?q=$lat,$lng',
-      'destinatarios': paraQuien,
-      'estado': 'activa', // 👈 CLAVE
-      'barrio_vecino': barrioReal.isEmpty ? "Sin barrio" : barrioReal,
-      'domicilio': domicilioReal,
+
+    // Timer cartel verde (10 seg)
+    Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => mostrarAvisoLlamada = false);
     });
 
-    // TEMPORIZADOR: El cartel verde de arriba desaparece a los 10 segundos
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted) {
-        setState(() {
-          mostrarAvisoLlamada = false;
-        });
-      }
+    // Timer reactivar botón (20 seg)
+    Timer(const Duration(seconds: 20), () {
+      if (mounted) setState(() => botonHabilitado = true);
     });
 
-    // tiempo para cartel blanco
-    Future.delayed(const Duration(seconds: 20), () {
+    // Timer desbloquear este tipo de alerta (3 min)
+    Timer(const Duration(minutes: 3), () {
       if (mounted) {
-        setState(() {
-          botonHabilitado = true;
-        });
-
-        Timer(const Duration(seconds: 180), () {
-          if (mounted) {
-            setState(() {
-              alertasBloqueadas.remove(alertaMandada);
-            });
-          }
-        });
+        setState(() => alertasBloqueadas.remove(alertaMandada));
       }
     });
   }
 
   void alPresionarBoton(String tipo) {
     setState(() => tipoAlertaSeleccionada = tipo);
-    temporizadorAlerta
-        ?.cancel(); // tiempo que dura la alerta hasta q se desmarca
+    temporizadorAlerta?.cancel();
     temporizadorAlerta = Timer(const Duration(seconds: 15), () {
       if (mounted) setState(() => tipoAlertaSeleccionada = "");
     });
@@ -232,22 +210,18 @@ class _InicioPageState extends State<InicioPage> {
 
   Widget _crearBoton(String tipo, IconData icono, String etiqueta,
       Color colorBase, Color colorResaltado) {
-    bool estaSeleccionado = tipoAlertaSeleccionada == tipo;
+    bool bloqueado = alertasBloqueadas.contains(tipo);
+    bool seleccionado = tipoAlertaSeleccionada == tipo;
+
     return BotonAlerta(
       texto: etiqueta,
       icono: icono,
-      estaSeleccionado: estaSeleccionado,
-      colorFondo: alertasBloqueadas.contains(tipo)
+      estaSeleccionado: seleccionado,
+      colorFondo: bloqueado
           ? Colors.grey.shade400
-          : (estaSeleccionado ? colorResaltado : colorBase),
+          : (seleccionado ? colorResaltado : colorBase),
       accion: () {
-        if (!alertasBloqueadas.contains(tipo)) {
-          // 1. Le avisamos a Flutter que la pantalla CAMBIÓ
-          setState(() {
-            tipoAlertaSeleccionada = tipo;
-          });
-
-          // 2. Ejecutamos tu lógica normal
+        if (!bloqueado) {
           alPresionarBoton(tipo);
         }
       },
@@ -256,6 +230,12 @@ class _InicioPageState extends State<InicioPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (cargando) {
+      return Scaffold(
+          backgroundColor: colorFondoPantalla1,
+          body: const Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Barrio Seguro",
@@ -268,7 +248,6 @@ class _InicioPageState extends State<InicioPage> {
         color: colorFondoPantalla1,
         child: Stack(
           children: [
-            // El contenido principal con Scroll
             SingleChildScrollView(
               child: Column(
                 children: [
@@ -276,7 +255,6 @@ class _InicioPageState extends State<InicioPage> {
                   const Text("Selecciona tu alerta",
                       style:
                           TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-
                   const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -286,7 +264,6 @@ class _InicioPageState extends State<InicioPage> {
                       crossAxisCount: 2,
                       mainAxisSpacing: 15,
                       crossAxisSpacing: 15,
-                      childAspectRatio: 1.05,
                       children: [
                         _crearBoton("robo", Icons.local_police, "Robo",
                             const Color(0xFFFAFAF9), const Color(0xFF297212)),
@@ -318,60 +295,46 @@ class _InicioPageState extends State<InicioPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(
-                      height:
-                          30), // aqui cambie la distancia del boton era de 30
-                  // BOTÓN EXCLUSIVO PARA ADMIN DE SERVICIOS (Nivel 2)
+
+                  const SizedBox(height: 30),
+
+                  // 🛡️ BOTÓN ADMIN DE SERVICIOS (Visible si rol <= 2)
                   if (rolUsuario <= 2)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 10),
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.assignment_turned_in,
-                            color: Colors.white),
-                        label: const Text("VER PEDIDOS DE SERVICIOS",
-                            style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Colors.orange, // Color Naranja para diferenciarlo
-                          padding: const EdgeInsets.symmetric(vertical: 0),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.assignment_turned_in,
+                              color: Colors.white),
+                          label: const Text("VER PEDIDOS DE SERVICIOS",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10))),
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const AdminServiciosPage())),
                         ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const AdminServiciosPage()),
-                          );
-                        },
                       ),
                     ),
 
                   if (!botonHabilitado)
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: Colors.red.shade900, width: 1.5),
-                        ),
-                        child: Text(
-                          "Alerta enviada. Por favor, quédese atento, ya lo van a llamar.",
-                          textAlign: TextAlign.center,
+                      padding: const EdgeInsets.all(20),
+                      child: Text("Alerta enviada. Espere el llamado.",
                           style: TextStyle(
-                            color: Colors.red.shade900,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
+                              color: Colors.red.shade900,
+                              fontWeight: FontWeight.bold)),
                     ),
+
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: SizedBox(
@@ -381,23 +344,18 @@ class _InicioPageState extends State<InicioPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade900,
                           foregroundColor: Colors.white,
-                          elevation: 4,
                           disabledBackgroundColor: Colors.grey.shade400,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15)),
                         ),
-                        onPressed: (tipoAlertaSeleccionada.isEmpty ||
-                                !botonHabilitado ||
-                                alertasBloqueadas
-                                    .contains(tipoAlertaSeleccionada))
-                            ? null
-                            : enviarAlerta,
+                        onPressed:
+                            (tipoAlertaSeleccionada.isEmpty || !botonHabilitado)
+                                ? null
+                                : enviarAlerta,
                         child: Text(
                             botonHabilitado ? "ENVIAR ALERTA" : "ESPERE...",
                             style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2)),
+                                fontSize: 20, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ),
@@ -405,8 +363,6 @@ class _InicioPageState extends State<InicioPage> {
                 ],
               ),
             ),
-
-            // 🟢 CARTEL VERDE (Flota arriba de todo cuando mostrarAvisoLlamada es true)
             if (mostrarAvisoLlamada)
               Positioned(
                 top: 10,
@@ -415,31 +371,18 @@ class _InicioPageState extends State<InicioPage> {
                 child: Container(
                   padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0FFF4),
-                    border:
-                        Border.all(color: const Color(0xFFB9E9C3), width: 1.5),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4)),
-                    ],
-                  ),
+                      color: const Color(0xFFF0FFF4),
+                      border: Border.all(color: const Color(0xFFB9E9C3)),
+                      borderRadius: BorderRadius.circular(10)),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle,
-                          color: Color(0xFF5BB568), size: 28),
+                      const Icon(Icons.check_circle, color: Color(0xFF5BB568)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          mensajeConfirmacion, // Usa el texto dinámico que ya tenías
-                          style: const TextStyle(
-                              color: Color(0xFF357644),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                          child: Text(mensajeConfirmacion,
+                              style: const TextStyle(
+                                  color: Color(0xFF357644),
+                                  fontWeight: FontWeight.bold))),
                     ],
                   ),
                 ),
@@ -455,16 +398,9 @@ class _InicioPageState extends State<InicioPage> {
       texto: "Más opciones",
       icono: Icons.keyboard_arrow_down,
       estaSeleccionado: false,
-      colorFondo: const Color.fromARGB(255, 252, 250, 250),
-      accion: () {
-        debugPrint("👉 BOTON MAS OPCIONES PRESIONADO");
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ReclamosPage(),
-          ),
-        );
-      },
+      colorFondo: const Color(0xFFFAFAF9),
+      accion: () => Navigator.push(context,
+          MaterialPageRoute(builder: (context) => const ReclamosPage())),
     );
   }
 }

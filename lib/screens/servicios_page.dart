@@ -22,93 +22,91 @@ class _ServiciosPageState extends State<ServiciosPage> {
   Timer? timerDesmarcar;
   Map<String, bool> serviciosBloqueados = {};
 
-  // Variables que se muestran en la pantalla y se envían a gestión
   String nombreVecinoReal = "Cargando...";
   String telefonoVecinoReal = "...";
   String barrioReal = "No especificado";
   String domicilioReal = "No especificado";
 
-  // --- LISTADO DE OFICIOS (MANTENGO TUS COLORES ORIGINALES) ---
   final List<Map<String, dynamic>> misOficios = [
     {
       "nombre": "Albañil",
       "icono": Icons.foundation,
-      "colorBase": const Color.fromARGB(255, 250, 251, 250),
+      "colorBase": const Color(0xFFFAFBFA),
       "colorPresionado": const Color(0xFF97786D),
-      "colorIcono": const Color.fromARGB(255, 62, 26, 145),
+      "colorIcono": const Color(0xFF3E1A91),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Gomeria",
       "icono": Icons.tire_repair,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorBase": const Color(0xFFF9F8F8),
       "colorPresionado": const Color(0xFFD75BDB),
-      "colorIcono": const Color.fromARGB(255, 179, 165, 41),
+      "colorIcono": const Color(0xFFB3A529),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Jardinero",
       "icono": Icons.yard,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorBase": const Color(0xFFF9F8F8),
       "colorPresionado": Colors.green,
-      "colorIcono": const Color.fromARGB(255, 163, 104, 104),
+      "colorIcono": const Color(0xFFA36868),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Plomero",
       "icono": Icons.plumbing,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
-      "colorPresionado": const Color.fromARGB(255, 75, 115, 176),
-      "colorIcono": const Color.fromARGB(255, 186, 129, 37),
+      "colorBase": const Color(0xFFF9F8F8),
+      "colorPresionado": const Color(0xFF4B73B0),
+      "colorIcono": const Color(0xFFBA8125),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Electricista",
       "icono": Icons.electrical_services,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
-      "colorPresionado": const Color.fromARGB(255, 214, 125, 77),
-      "colorIcono": const Color.fromARGB(255, 38, 122, 137),
+      "colorBase": const Color(0xFFF9F8F8),
+      "colorPresionado": const Color(0xFFD67D4D),
+      "colorIcono": const Color(0xFF267A89),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Gasista",
       "icono": Icons.propane_tank,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
-      "colorPresionado": const Color.fromARGB(255, 206, 92, 92),
-      "colorIcono": const Color.fromARGB(255, 21, 156, 25),
+      "colorBase": const Color(0xFFF9F8F8),
+      "colorPresionado": const Color(0xFFCE5C5C),
+      "colorIcono": const Color(0xFF159C19),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Cerrajero",
       "icono": Icons.vpn_key,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
+      "colorBase": const Color(0xFFF9F8F8),
       "colorPresionado": const Color(0xFFA59210),
-      "colorIcono": const Color.fromARGB(221, 156, 31, 31),
+      "colorIcono": const Color(0xDD9C1F1F),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Herrero",
       "icono": Icons.precision_manufacturing,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
-      "colorPresionado": const Color.fromARGB(255, 154, 96, 180),
-      "colorIcono": const Color.fromARGB(255, 109, 15, 15),
+      "colorBase": const Color(0xFFF9F8F8),
+      "colorPresionado": const Color(0xFF9A60B4),
+      "colorIcono": const Color(0xFF6D0F0F),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Pintor",
       "icono": Icons.format_paint,
-      "colorBase": const Color.fromARGB(255, 249, 248, 248),
-      "colorPresionado": const Color.fromARGB(255, 151, 83, 120),
-      "colorIcono": const Color.fromARGB(255, 37, 34, 187),
+      "colorBase": const Color(0xFFF9F8F8),
+      "colorPresionado": const Color(0xFF975378),
+      "colorIcono": const Color(0xFF2522BB),
       "colorLetra": Colors.black87
     },
     {
       "nombre": "Otros",
       "icono": Icons.more_horiz,
-      "colorBase": const Color.fromARGB(255, 252, 252, 252),
-      "colorPresionado": const Color.fromARGB(221, 67, 44, 159),
-      "colorIcono": const Color.fromARGB(255, 35, 29, 29),
-      "colorLetra": const Color.fromARGB(221, 16, 12, 12)
+      "colorBase": const Color(0xFFFCFCFC),
+      "colorPresionado": const Color(0xDD432C9F),
+      "colorIcono": const Color(0xFF231D1D),
+      "colorLetra": const Color(0xDD100C0C)
     },
   ];
 
@@ -119,14 +117,25 @@ class _ServiciosPageState extends State<ServiciosPage> {
     obtenerDatosUsuario();
   }
 
+  @override
+  void dispose() {
+    timerDesmarcar?.cancel();
+    super.dispose();
+  }
+
   Future<void> obtenerDatosUsuario() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Prioridad 1: Cargar lo que tengamos en SharedPreferences para respuesta instantánea
+    setState(() {
+      nombreVecinoReal = prefs.getString('nombre_local') ?? "Vecino";
+      telefonoVecinoReal = prefs.getString('tel_local') ?? "Sin Tel";
+      barrioReal = prefs.getString('barrio_local') ?? "No especificado";
+      domicilioReal = prefs.getString('domicilio_local') ?? "No especificado";
+    });
+
     try {
-      String deviceIdOriginal = await _getDeviceId();
-      String deviceIdLimpio = deviceIdOriginal;
-      final match = RegExp(r'(STAS[\w\.\-]+)').firstMatch(deviceIdOriginal);
-      if (match != null) deviceIdLimpio = match.group(0)!;
-      deviceIdLimpio = deviceIdLimpio.trim().toUpperCase();
+      String deviceIdLimpio = await _getDeviceIdLimpio();
 
       var query = await FirebaseFirestore.instance
           .collection('usuarios')
@@ -136,49 +145,36 @@ class _ServiciosPageState extends State<ServiciosPage> {
 
       if (query.docs.isNotEmpty && mounted) {
         var userDoc = query.docs.first.data();
-
-        String n = userDoc['nombre'] ?? "Vecino";
-        String t = userDoc['numerodecelular'] ?? "Sin Tel";
-        String b = userDoc['barrio'] ?? "No especificado";
-        String d = userDoc['domicilio'] ?? "No especificado";
-
-        // Guardamos en memoria local
-        await prefs.setString('nombre_local', n);
-        await prefs.setString('tel_local', t);
-        await prefs.setString('barrio_local', b);
-        await prefs.setString('domicilio_local', d);
-
         setState(() {
-          nombreVecinoReal = n;
-          telefonoVecinoReal = t;
-          barrioReal = b;
-          domicilioReal = d;
+          nombreVecinoReal = userDoc['nombre'] ?? nombreVecinoReal;
+          telefonoVecinoReal = userDoc['numerodecelular'] ?? telefonoVecinoReal;
+          barrioReal = userDoc['barrio'] ?? barrioReal;
+          domicilioReal = userDoc['domicilio'] ?? domicilioReal;
         });
-        return;
+
+        // Actualizar caché
+        await prefs.setString('nombre_local', nombreVecinoReal);
+        await prefs.setString('tel_local', telefonoVecinoReal);
+        await prefs.setString('barrio_local', barrioReal);
+        await prefs.setString('domicilio_local', domicilioReal);
       }
     } catch (e) {
-      debugPrint("Error: $e");
-    }
-
-    if (mounted) {
-      setState(() {
-        nombreVecinoReal = prefs.getString('nombre_local') ?? "Vecino";
-        telefonoVecinoReal = prefs.getString('tel_local') ?? "Sin Tel";
-        barrioReal = prefs.getString('barrio_local') ?? "No especificado";
-        domicilioReal = prefs.getString('domicilio_local') ?? "No especificado";
-      });
+      debugPrint("Error sincronizando datos: $e");
     }
   }
 
-  Future<String> _getDeviceId() async {
+  Future<String> _getDeviceIdLimpio() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    String id = "";
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      return androidInfo.model + androidInfo.id;
+      id = androidInfo.model + androidInfo.id;
     } else {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      return iosInfo.identifierForVendor ?? "unknown_ios";
+      id = iosInfo.identifierForVendor ?? "unknown_ios";
     }
+    final match = RegExp(r'(STAS[\w\.\-]+)').firstMatch(id);
+    return (match != null ? match.group(0)! : id).trim().toUpperCase();
   }
 
   void enviarPedido() async {
@@ -186,20 +182,21 @@ class _ServiciosPageState extends State<ServiciosPage> {
 
     setState(() {
       enviando = true;
-      cartelConfirmacion = "Solicitud de $servicioSeleccionado enviada";
     });
 
     try {
+      // 1. Obtener ubicación con timeout
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5),
+        timeLimit: const Duration(seconds: 8),
       );
 
-      // Reparación de la vibración (Error naranja corregido)
-      bool canVibrate = await Vibration.hasVibrator() ?? false;
-      if (canVibrate) Vibration.vibrate(duration: 500);
+      // 2. Feedback háptico
+      if (await Vibration.hasVibrator()) {
+        Vibration.vibrate(duration: 500);
+      }
 
-      // Envío a Firebase con etiquetas exactas para el Tablero de Gestión
+      // 3. Subir a Firebase
       await FirebaseFirestore.instance.collection('servicios').add({
         'tipo': servicioSeleccionado,
         'nombre': nombreVecinoReal,
@@ -211,25 +208,34 @@ class _ServiciosPageState extends State<ServiciosPage> {
         'estado': 'pendiente',
       });
 
-      if (mounted) {
-        setState(() => serviciosBloqueados[servicioSeleccionado] = true);
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString("fecha_servicio_$servicioSeleccionado",
-            DateTime.now().toIso8601String());
-      }
-    } catch (e) {
-      debugPrint("Error al enviar: $e");
-    } finally {
+      // 4. Bloqueo preventivo (evita spam)
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String key = "fecha_servicio_$servicioSeleccionado";
+      await prefs.setString(key, DateTime.now().toIso8601String());
+
       if (mounted) {
         setState(() {
-          enviando = false;
+          serviciosBloqueados[servicioSeleccionado] = true;
+          cartelConfirmacion = "Solicitud de $servicioSeleccionado enviada";
           servicioSeleccionado = "";
         });
-        Timer(const Duration(seconds: 8), () {
+      }
+    } catch (e) {
+      _mostrarError("No se pudo enviar. Reintenta.");
+    } finally {
+      if (mounted) {
+        setState(() => enviando = false);
+        Timer(const Duration(seconds: 5), () {
           if (mounted) setState(() => cartelConfirmacion = "");
         });
       }
     }
+  }
+
+  void _mostrarError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    );
   }
 
   void _iniciarTemporizador() {
@@ -247,6 +253,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
       String? fechaStr = prefs.getString("fecha_servicio_$nombre");
       if (fechaStr != null) {
         DateTime fechaGuardada = DateTime.parse(fechaStr);
+        // Bloqueo por 2 minutos para evitar duplicados accidentales
         if (ahora.difference(fechaGuardada).inMinutes < 2) {
           setState(() => serviciosBloqueados[nombre] = true);
         }
@@ -257,14 +264,18 @@ class _ServiciosPageState extends State<ServiciosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 187, 233, 246),
+      backgroundColor: const Color(0xFFBBE9F6),
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        elevation: 0,
+        backgroundColor: Colors.blue[700],
         centerTitle: true,
-        title: const Text("Barrio Seguro",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text("SERVICIOS DEL BARRIO",
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -272,128 +283,157 @@ class _ServiciosPageState extends State<ServiciosPage> {
         children: [
           Column(
             children: [
-              const SizedBox(height: 15),
-              const Text("Seleccioná tu servicio",
+              const SizedBox(height: 20),
+              const Text("¿Qué servicio necesitás?",
                   style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87)),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1A237E))),
               const SizedBox(height: 15),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: GridView.builder(
-                    itemCount: misOficios.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 1.8,
-                    ),
-                    itemBuilder: (context, index) {
-                      String nombre = misOficios[index]['nombre'];
-                      bool estaBloqueado = serviciosBloqueados[nombre] ?? false;
-                      bool estaSeleccionado = servicioSeleccionado == nombre;
+                child: GridView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  itemCount: misOficios.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.6,
+                  ),
+                  itemBuilder: (context, index) {
+                    var oficio = misOficios[index];
+                    bool bloqueado =
+                        serviciosBloqueados[oficio['nombre']] ?? false;
+                    bool seleccionado =
+                        servicioSeleccionado == oficio['nombre'];
 
-                      return GestureDetector(
-                        onTap: estaBloqueado
-                            ? null
-                            : () {
-                                setState(() => servicioSeleccionado = nombre);
-                                _iniciarTemporizador();
-                              },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: estaBloqueado
-                                ? Colors.grey.shade400
-                                : (estaSeleccionado
-                                    ? misOficios[index]['colorPresionado']
-                                    : misOficios[index]['colorBase']),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: estaSeleccionado
-                                    ? Colors.black
-                                    : Colors.white.withOpacity(0.3),
-                                width: 2),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(misOficios[index]['icono'],
-                                  size: 35,
-                                  color: estaBloqueado
-                                      ? Colors.grey
-                                      : misOficios[index]['colorIcono']),
-                              const SizedBox(width: 8),
-                              Text(nombre,
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: estaBloqueado
-                                          ? Colors.grey
-                                          : misOficios[index]['colorLetra'])),
-                            ],
+                    return InkWell(
+                      onTap: bloqueado
+                          ? null
+                          : () {
+                              setState(() =>
+                                  servicioSeleccionado = oficio['nombre']);
+                              _iniciarTemporizador();
+                            },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: bloqueado
+                              ? Colors.grey[300]
+                              : (seleccionado
+                                  ? oficio['colorPresionado']
+                                  : oficio['colorBase']),
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            if (seleccionado)
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4))
+                          ],
+                          border: Border.all(
+                            color: seleccionado
+                                ? Colors.white
+                                : Colors.transparent,
+                            width: 3,
                           ),
                         ),
-                      );
-                    },
-                  ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(oficio['icono'],
+                                size: 32,
+                                color: bloqueado
+                                    ? Colors.grey
+                                    : (seleccionado
+                                        ? Colors.white
+                                        : oficio['colorIcono'])),
+                            const SizedBox(height: 5),
+                            Text(oficio['nombre'],
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: bloqueado
+                                        ? Colors.grey
+                                        : (seleccionado
+                                            ? Colors.white
+                                            : oficio['colorLetra']))),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade700,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15)),
-                    ),
-                    onPressed: servicioSeleccionado.isEmpty ||
-                            enviando ||
-                            nombreVecinoReal == "Cargando..."
-                        ? null
-                        : enviarPedido,
-                    child: Text(enviando ? "ENVIANDO..." : "ENVIAR PEDIDO",
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                ),
+              _buildBotonEnviar(),
+            ],
+          ),
+          if (cartelConfirmacion.isNotEmpty) _buildCartelConfirmacion(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBotonEnviar() {
+    bool desactivado = servicioSeleccionado.isEmpty ||
+        enviando ||
+        nombreVecinoReal == "Cargando...";
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: SizedBox(
+        width: double.infinity,
+        height: 65,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue[900],
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            elevation: 5,
+          ),
+          onPressed: desactivado ? null : enviarPedido,
+          child: enviando
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text("SOLICITAR SERVICIO NOW",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCartelConfirmacion() {
+    return Positioned(
+      top: 10,
+      left: 15,
+      right: 15,
+      child: Material(
+        elevation: 10,
+        borderRadius: BorderRadius.circular(15),
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.green, width: 2),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 30),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Text(cartelConfirmacion,
+                    style: const TextStyle(
+                        color: Colors.green,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-          if (cartelConfirmacion.isNotEmpty)
-            Positioned(
-              top: 15,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F5E9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade400, width: 2),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle,
-                        color: Colors.green, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Text(cartelConfirmacion,
-                            style: const TextStyle(
-                                color: Color(0xFF2E7D32),
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold))),
-                  ],
-                ),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }

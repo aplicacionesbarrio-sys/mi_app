@@ -22,11 +22,15 @@ class _TablerosAdminState extends State<TablerosAdmin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text("TABLEROS DE GESTIÓN",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color.fromARGB(255, 79, 30, 152),
+        elevation: 2,
+        title: const Text("PANEL DE CONTROL",
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.1)),
+        backgroundColor: const Color(0xFF4F1E98),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -41,14 +45,20 @@ class _TablerosAdminState extends State<TablerosAdmin> {
 
   Widget _buildSelectorDeTablero() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      color: Colors.white,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _botonFiltro("RECLAMOS", "reclamos", Icons.assignment, Colors.blue),
-          _botonFiltro("ALERTAS", "alertas", Icons.warning, Colors.red),
-          _botonFiltro("SERVICIOS", "servicios", Icons.build, Colors.green),
+          _botonFiltro(
+              "RECLAMOS", "reclamos", Icons.assignment_late, Colors.blue),
+          _botonFiltro("ALERTAS", "alertas", Icons.campaign, Colors.red),
+          _botonFiltro("SERVICIOS", "servicios", Icons.handyman, Colors.green),
         ],
       ),
     );
@@ -59,94 +69,128 @@ class _TablerosAdminState extends State<TablerosAdmin> {
     bool seleccionado = coleccionActual == coleccion;
     return GestureDetector(
       onTap: () => setState(() => coleccionActual = coleccion),
-      child: Column(
-        children: [
-          Icon(icono, color: seleccionado ? color : Colors.grey, size: 30),
-          Text(texto,
-              style: TextStyle(
-                  color: seleccionado ? color : Colors.grey,
-                  fontWeight:
-                      seleccionado ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 10)),
-          if (seleccionado) Container(height: 2, width: 40, color: color),
-        ],
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: seleccionado ? color.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icono,
+                color: seleccionado ? color : Colors.grey[400], size: 28),
+            const SizedBox(height: 4),
+            Text(texto,
+                style: TextStyle(
+                    color: seleccionado ? color : Colors.grey[600],
+                    fontWeight:
+                        seleccionado ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 11)),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildListaDeDatos() {
     return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance.collection(coleccionActual).snapshots(),
+      // ORDENAMOS POR FECHA DESCENDENTE (Lo más nuevo arriba)
+      stream: FirebaseFirestore.instance
+          .collection(coleccionActual)
+          .orderBy('fecha', descending: true)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(child: Text("Error al cargar datos"));
+          return Center(
+              child: Text("Error: ${snapshot.error}",
+                  style: const TextStyle(color: Colors.red)));
         }
 
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF4F1E98)));
+        }
+
+        if (snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inbox, size: 80, color: Colors.grey[300]),
+                const SizedBox(height: 10),
+                Text("No hay registros en $coleccionActual",
+                    style: TextStyle(color: Colors.grey[500], fontSize: 16)),
+              ],
+            ),
+          );
         }
 
         var docs = snapshot.data!.docs;
         return ListView.builder(
           itemCount: docs.length,
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 80),
           itemBuilder: (context, index) {
             var data = docs[index].data() as Map<String, dynamic>;
             String docId = docs[index].id;
             String estado = data['estado'] ?? 'pendiente';
 
-            // Formato de fecha corregido
-            String fechaFormateada = "Sin fecha";
-            if (data['fecha'] != null) {
-              if (data['fecha'] is Timestamp) {
-                DateTime dt = (data['fecha'] as Timestamp).toDate();
-                fechaFormateada =
-                    "${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
-              } else {
-                fechaFormateada = data['fecha'].toString();
-              }
-            }
+            DateTime dt = (data['fecha'] is Timestamp)
+                ? (data['fecha'] as Timestamp).toDate()
+                : DateTime.now();
+
+            String fechaFormateada =
+                "${dt.day}/${dt.month} - ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}hs";
 
             return Card(
-              elevation: 3,
-              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+              elevation: 4,
+              shadowColor: Colors.black26,
+              margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15)),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "${data['tipo'] ?? 'AVISO'}".toUpperCase(),
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _colorEstado(estado),
-                                fontSize: 15),
+                  borderRadius: BorderRadius.circular(20)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                        left:
+                            BorderSide(color: _colorEstado(estado), width: 6)),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "${data['tipo'] ?? 'AVISO GENERAL'}"
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: _colorEstado(estado),
+                                  fontSize: 16),
+                            ),
                           ),
-                        ),
-                        _badgeEstado(estado),
-                      ],
-                    ),
-                    const Divider(),
-                    // USANDO LOS NOMBRES EXACTOS DE TU FIREBASE
-                    _itemInfo(Icons.person,
-                        "Vecino: ${data['nombre_vecino'] ?? data['nombre'] ?? 'No registrado'}"),
-                    _itemInfo(Icons.location_on,
-                        "Barrio: ${data['barrio_vecino'] ?? 'No especificado'}"),
-                    _itemInfo(Icons.home,
-                        "Domicilio: ${data['domicilio'] ?? 'No especificado'}"),
-                    _itemInfo(Icons.phone,
-                        "Celular: ${data['numerodecelular'] ?? 'Sin número'}"),
-                    _itemInfo(
-                        Icons.access_time, "Ficha/Hora: $fechaFormateada"),
-                    const SizedBox(height: 15),
-                    _botonGestionar(docId),
-                  ],
+                          _badgeEstado(estado),
+                        ],
+                      ),
+                      const Divider(height: 20),
+                      _itemInfo(Icons.person_pin,
+                          "${data['nombre'] ?? 'Vecino anónimo'}",
+                          isBold: true),
+                      _itemInfo(Icons.map,
+                          "Barrio: ${data['barrio'] ?? 'No especificado'}"),
+                      _itemInfo(Icons.home_work,
+                          "Dom: ${data['domicilio'] ?? 'No especificado'}"),
+                      _itemInfo(Icons.phone_android,
+                          "Tel: ${data['numerodecelular'] ?? '---'}"),
+                      _itemInfo(Icons.event_note, "Recibido: $fechaFormateada"),
+                      const SizedBox(height: 15),
+                      _botonGestionar(docId, estado),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -158,46 +202,53 @@ class _TablerosAdminState extends State<TablerosAdmin> {
 
   Widget _badgeEstado(String estado) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: _colorEstado(estado).withOpacity(0.2),
-        borderRadius: BorderRadius.circular(10),
+        color: _colorEstado(estado),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Text(estado.toUpperCase(),
-          style: TextStyle(
-              color: _colorEstado(estado),
-              fontWeight: FontWeight.bold,
-              fontSize: 10)),
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9)),
     );
   }
 
-  Widget _botonGestionar(String docId) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => _cambiarEstadoDialog(docId),
-        icon: const Icon(Icons.edit, size: 18),
-        label: const Text("GESTIONAR ESTADO"),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(255, 79, 30, 152),
-          foregroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+  Widget _botonGestionar(String docId, String estadoActual) {
+    return ElevatedButton(
+      onPressed: () => _cambiarEstadoDialog(docId),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF4F1E98),
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 45),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.settings_suggest, size: 20),
+          SizedBox(width: 10),
+          Text("GESTIONAR ESTADO",
+              style: TextStyle(fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
 
-  Widget _itemInfo(IconData icono, String texto) {
+  Widget _itemInfo(IconData icono, String texto, {bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(icono, size: 16, color: Colors.grey[600]),
-          const SizedBox(width: 8),
+          Icon(icono,
+              size: 18, color: const Color(0xFF4F1E98).withOpacity(0.7)),
+          const SizedBox(width: 10),
           Expanded(
               child: Text(texto,
-                  style: const TextStyle(fontSize: 13, color: Colors.black87))),
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontWeight:
+                          isBold ? FontWeight.bold : FontWeight.normal))),
         ],
       ),
     );
@@ -206,48 +257,66 @@ class _TablerosAdminState extends State<TablerosAdmin> {
   void _cambiarEstadoDialog(String id) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-                padding: EdgeInsets.all(15),
-                child: Text("GESTIONAR REGISTRO",
-                    style: TextStyle(fontWeight: FontWeight.bold))),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.check_circle, color: Colors.green),
-              title: const Text("Marcar como FINALIZADO"),
-              onTap: () {
-                FirebaseFirestore.instance
-                    .collection(coleccionActual)
-                    .doc(id)
-                    .update({'estado': 'finalizado'});
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.timer, color: Colors.orange),
-              title: const Text("Poner en PENDIENTE"),
-              onTap: () {
-                FirebaseFirestore.instance
-                    .collection(coleccionActual)
-                    .doc(id)
-                    .update({'estado': 'pendiente'});
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              const Text("ACTUALIZAR ESTADO",
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+              const SizedBox(height: 10),
+              _opcionEstado(id, "finalizado", Icons.check_circle, Colors.green,
+                  "Marcar como Finalizado"),
+              _opcionEstado(id, "pendiente", Icons.pending_actions,
+                  Colors.orange, "Volver a Pendiente"),
+              _opcionEstado(id, "cancelado", Icons.cancel, Colors.red,
+                  "Cancelar / Rechazar"),
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       },
     );
   }
 
+  Widget _opcionEstado(
+      String id, String estado, IconData icono, Color color, String titulo) {
+    return ListTile(
+      leading: Icon(icono, color: color, size: 30),
+      title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
+      onTap: () {
+        FirebaseFirestore.instance
+            .collection(coleccionActual)
+            .doc(id)
+            .update({'estado': estado});
+        Navigator.pop(context);
+      },
+    );
+  }
+
   Color _colorEstado(String est) {
-    if (est == 'finalizado') return Colors.green;
-    if (est == 'pendiente') return Colors.orange;
-    return Colors.red;
+    switch (est.toLowerCase()) {
+      case 'finalizado':
+        return Colors.green;
+      case 'pendiente':
+        return Colors.orange;
+      case 'cancelado':
+        return Colors.red;
+      default:
+        return Colors.blueGrey;
+    }
   }
 }

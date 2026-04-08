@@ -22,18 +22,15 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String barrioVecinoReal = "Cargando...";
   String direccionVecinoReal = "Cargando...";
   final TextEditingController _detalleController = TextEditingController();
-  final TextEditingController _ubicacionController =
-      TextEditingController(); // <-- AGREGÁ ESTA LÍNEA AQUÍ
+  final TextEditingController _ubicacionController = TextEditingController();
 
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
   Future<void> enviarReclamoAlFirebase(
       String tipoRecibido, String barrioVecinoReal) async {
-    // Obtener datos del usuario desde SharedPreferences para Nombre y Celular
     final prefs = await SharedPreferences.getInstance();
     String nombreUsuario = prefs.getString('nombre') ?? "Vecino";
     String celularUsuario = prefs.getString('numerodecelular') ?? "Sin número";
 
-    // Lógica de empresas de destino (se mantiene igual)
     dynamic empresasDestino;
     if (tipoRecibido == "pérdida de agua") {
       empresasDestino = "aguas de la rioja";
@@ -67,8 +64,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
-      // Envío seguro a Firebase
-      // Envío a Firebase con los dos campos separados
       await FirebaseFirestore.instance.collection('reclamos').add({
         'tipo': tipoRecibido,
         'nombre': nombreUsuario,
@@ -78,47 +73,34 @@ class _ReclamosPageState extends State<ReclamosPage> {
         'estado': 'pendiente',
         'barrio_vecino': barrioVecinoReal,
         'empresa_destino': empresasDestino,
-
-        // 1. Guardamos la ubicación manual en 'domicilio'
         'domicilio': _ubicacionController.text.trim().isNotEmpty
             ? _ubicacionController.text.trim()
             : "Sin dirección especificada",
-
-        // 2. Guardamos el detalle que escribió el vecino
         'detalle': _detalleController.text.trim().isNotEmpty
             ? _detalleController.text.trim()
             : "Sin detalle especificado",
-
+        // CORRECCIÓN AQUÍ: Se agregó el $ y se cerró bien el string
         'link_mapa':
             "https://www.google.com/maps?q=${position.latitude},${position.longitude}",
       });
 
-      // Limpiamos AMBOS controladores al terminar con éxito
       _ubicacionController.clear();
-      _detalleController.clear();
-
-      // Limpiamos el texto recién después de enviar
       _detalleController.clear();
     } catch (e) {
       setState(() => mensajeConfirmacion = "Error al enviar: $e");
     }
   }
 
-  // Mapa de bloqueo actualizado con el nuevo botón
   Map<String, bool> reclamosBloqueados = {
     "pérdida de agua": false,
     "cable caído": false,
     "pérdida de gas": false,
-    "daños en vía pública": false // <--- Nuevo en la lista
+    "daños en vía pública": false
   };
 
   @override
   void initState() {
     super.initState();
-
-    // Color de fondo solo para rol 5
-
-    // Cargar bloqueos y datos de usuario
     _cargarEstadoBloqueos();
     _obtenerDatosUsuario();
   }
@@ -132,7 +114,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
         "pérdida de agua",
         "cable caído",
         "pérdida de gas",
-        "daños en vía pública" // <--- Agregado aquí
+        "daños en vía pública"
       ]) {
         String? fechaGuardadaStr = prefs.getString("fecha_$tipo");
         if (fechaGuardadaStr != null) {
@@ -150,11 +132,9 @@ class _ReclamosPageState extends State<ReclamosPage> {
 
   Future<void> _obtenerDatosUsuario() async {
     final prefs = await SharedPreferences.getInstance();
-
     String nombreLeido = prefs.getString('nombre') ?? "";
     String celularLeido = prefs.getString('numerodecelular') ?? "";
     String barrioLeido = prefs.getString('barrio') ?? "";
-    // Intentamos leer 'direccion' o 'domicilio', por las dudas
     String domicilioLeido = prefs.getString('domicilio') ?? "";
 
     if (!mounted) return;
@@ -167,12 +147,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
       direccionVecinoReal =
           domicilioLeido.isNotEmpty ? domicilioLeido : "Sin dirección";
     });
-
-    debugPrint("✅ Datos usuario cargados:");
-    debugPrint("Nombre: $nombreVecinoReal");
-    debugPrint("Teléfono: $telefonoVecinoReal");
-    debugPrint("Barrio: $barrioVecinoReal");
-    debugPrint("Domicilio: $direccionVecinoReal");
   }
 
   Future<void> _guardarBloqueo(String tipo) async {
@@ -181,14 +155,13 @@ class _ReclamosPageState extends State<ReclamosPage> {
   }
 
   void alPresionarBoton(String tipo) {
+    if (reclamosBloqueados[tipo] == true) return;
     _detalleController.clear();
     _mostrarCuadroDetalle(context);
-    if (reclamosBloqueados[tipo] == true) return;
     setState(() => reclamoSeleccionado = tipo);
 
     _timer?.cancel();
     _timer = Timer(const Duration(seconds: 60), () {
-      // boton de reclamos dura este tiempo marcado
       if (mounted) setState(() => reclamoSeleccionado = "");
     });
   }
@@ -214,16 +187,12 @@ class _ReclamosPageState extends State<ReclamosPage> {
     await _guardarBloqueo(tipoEnviado);
 
     Timer(const Duration(seconds: 10), () {
-      // duracion del cartel verde de arriba
       if (mounted) setState(() => mensajeConfirmacion = "");
     });
 
     Timer(const Duration(minutes: 2), () {
-      // bloqueo de un boton de reclamo enviada
       if (mounted) {
-        setState(() {
-          reclamosBloqueados[tipoEnviado] = false;
-        });
+        setState(() => reclamosBloqueados[tipoEnviado] = false);
       }
     });
   }
@@ -231,6 +200,8 @@ class _ReclamosPageState extends State<ReclamosPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _detalleController.dispose();
+    _ubicacionController.dispose();
     super.dispose();
   }
 
@@ -262,7 +233,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
-                      // 1. Pérdida de Agua
                       BotonAlertaPro(
                         texto: (reclamosBloqueados["pérdida de agua"] ?? false)
                             ? "Reportado"
@@ -283,8 +253,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
                         accion: () => alPresionarBoton("pérdida de agua"),
                       ),
                       const SizedBox(height: 10),
-
-                      // 2. Cable Caído
                       BotonAlertaPro(
                         texto: (reclamosBloqueados["cable caído"] ?? false)
                             ? "Reportado"
@@ -302,8 +270,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
                         accion: () => alPresionarBoton("cable caído"),
                       ),
                       const SizedBox(height: 10),
-
-                      // 3. Pérdida de Gas
                       BotonAlertaPro(
                         texto: (reclamosBloqueados["pérdida de gas"] ?? false)
                             ? "Reportado"
@@ -324,8 +290,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
                         accion: () => alPresionarBoton("pérdida de gas"),
                       ),
                       const SizedBox(height: 10),
-
-                      // 4. NUEVO: DAÑOS EN VÍA PÚBLICA (CON TEXTO AJUSTADO)
                       BotonAlertaPro(
                         texto: (reclamosBloqueados["daños en vía pública"] ??
                                 false)
@@ -348,20 +312,16 @@ class _ReclamosPageState extends State<ReclamosPage> {
                             reclamoSeleccionado == "daños en vía pública",
                         accion: () => alPresionarBoton("daños en vía pública"),
                       ),
-
                       const SizedBox(height: 40),
-                      // BOTÓN ENVIAR FINAL
                       SizedBox(
                         width: double.infinity,
                         height: 60,
                         child: Material(
                           color: reclamoSeleccionado.isEmpty
                               ? Colors.grey.shade400
-                              : const Color(0xFFFF0000), // Rojo puro y fuerte
+                              : const Color(0xFFFF0000),
                           borderRadius: BorderRadius.circular(15),
-                          elevation: reclamoSeleccionado.isEmpty
-                              ? 0
-                              : 15, // Más sombra para que resalte
+                          elevation: reclamoSeleccionado.isEmpty ? 0 : 15,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(15),
                             onTap: reclamoSeleccionado.isEmpty
@@ -398,7 +358,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
               ],
             ),
           ),
-          // CARTEL VERDE DE CONFIRMACIÓN
           if (mensajeConfirmacion.isNotEmpty)
             Positioned(
               top: 10,
@@ -445,31 +404,25 @@ class _ReclamosPageState extends State<ReclamosPage> {
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          // 1. TÍTULO MÁS CHICO Y EN UNA SOLA FILA
-          title: const Text(
-            "Completar Reporte",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold), // Fuente reducida
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20, vertical: 5), // Menos aire arriba/abajo
+          title: const Text("Completar Reporte",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("📍 Ubicación:",
-                    style: TextStyle(fontSize: 13)), // Texto más pequeño
-                const SizedBox(height: 4), // Espacio mínimo
+                const Text("📍 Ubicación:", style: TextStyle(fontSize: 13)),
+                const SizedBox(height: 4),
                 TextField(
                   controller: _ubicacionController,
                   maxLength: 40,
-                  style: const TextStyle(
-                      fontSize: 14), // Texto de entrada más chico
+                  style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: "Calle y altura",
-                    isDense: true, // Hace el campo más petiso
+                    isDense: true,
                     filled: true,
                     fillColor: Colors.grey[200],
                     border: OutlineInputBorder(
@@ -477,8 +430,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
                         borderSide: BorderSide.none),
                   ),
                 ),
-                const SizedBox(height: 8), // Espacio reducido entre campos
-
+                const SizedBox(height: 8),
                 const Text("📝 Detalle:", style: TextStyle(fontSize: 13)),
                 const SizedBox(height: 4),
                 TextField(
@@ -487,7 +439,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
                   style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: "¿Qué sucede?",
-                    isDense: true, // Campo más petiso
+                    isDense: true,
                     filled: true,
                     fillColor: Colors.grey[200],
                     border: OutlineInputBorder(
@@ -498,16 +450,11 @@ class _ReclamosPageState extends State<ReclamosPage> {
               ],
             ),
           ),
-          actionsPadding: const EdgeInsets.only(
-              bottom: 10, left: 10, right: 10), // Botones más pegados al borde
           actions: [
             Row(
               children: [
-                // 2. BOTONES MÁS COMPACTOS
                 Expanded(
                   child: TextButton(
-                    style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero), // Quita el margen interno
                     onPressed: () {
                       _ubicacionController.clear();
                       _detalleController.clear();
@@ -519,19 +466,7 @@ class _ReclamosPageState extends State<ReclamosPage> {
                 ),
                 Expanded(
                   child: TextButton(
-                    style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero), // Quita el margen interno
-                    onPressed: () {
-                      setState(() {});
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("✅ Datos guardados. Presioná ENVIAR."),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+                    onPressed: () => Navigator.pop(context),
                     child: const Text("GUARDAR",
                         style: TextStyle(color: Colors.blue, fontSize: 13)),
                   ),

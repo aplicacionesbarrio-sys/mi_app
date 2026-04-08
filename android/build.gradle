@@ -1,4 +1,5 @@
 buildscript {
+    // 🛡️ BLINDAJE: Usamos la 1.9.22 que tenés, es muy estable para Flutter
     ext.kotlin_version = '1.9.22'
 
     repositories {
@@ -7,11 +8,16 @@ buildscript {
     }
 
     dependencies {
+        // 🛡️ BLINDAJE: Gradle 8.1.0 es excelente para evitar errores de "Namespace" en Android
         classpath "com.android.tools.build:gradle:8.1.0"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.google.gms:google-services:4.3.15'
+        
+        // 🛡️ BLINDAJE: Actualizamos a 4.4.1. 
+        // La 4.3.15 que tenías a veces falla con las últimas versiones de Firebase (Crashlytics/Auth)
+        classpath 'com.google.gms:google-services:4.4.1' 
     }
 }
+
 allprojects {
     repositories {
         google()

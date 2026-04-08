@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
+import 'dart:math';
 import 'validacion_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../admin/admin_home.dart';
 
 class RegistroPage extends StatefulWidget {
   const RegistroPage({super.key});
@@ -36,6 +36,16 @@ class _RegistroPageState extends State<RegistroPage> {
 
   final _formKey = GlobalKey<FormState>();
   String? barrioSeleccionado;
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _dniController.dispose();
+    _domicilioController.dispose();
+    _emailController.dispose();
+    _celularController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,103 +122,111 @@ class _RegistroPageState extends State<RegistroPage> {
 
                 ElevatedButton(
                   onPressed: () async {
-                    // 1. Validación inicial
+                    // 1. Validaciones de UI
                     if (barrioSeleccionado == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("Por favor seleccioná un barrio")),
+                        const SnackBar(content: Text("Seleccioná un barrio")),
                       );
                       return;
                     }
-                    if (_domicilioController.text.trim().isEmpty) {
+                    if (_dniController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("Por favor ingresá tu dirección")),
+                        const SnackBar(content: Text("Ingresá tu DNI")),
                       );
                       return;
                     }
 
                     final messenger = ScaffoldMessenger.of(context);
+                    final String dniIngresado = _dniController.text.trim();
 
-                    // 2. Persistencia local (SharedPreferences)
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setString(
-                        'nombre', _nombreController.text.trim());
-                    await prefs.setString(
-                        'numerodecelular', _celularController.text.trim());
-                    await prefs.setString(
-                        'domicilio', _domicilioController.text.trim());
-                    await prefs.setString('barrio', barrioSeleccionado ?? "");
-
-                    debugPrint(
-                        "✅ Memoria local actualizada: ${_nombreController.text}");
+                    // --- GENERAR CÓDIGO DE 6 DÍGITOS ---
+                    String nuevoCodigo =
+                        (Random().nextInt(900000) + 100000).toString();
 
                     try {
+                      // --- ESCUDO: VERIFICAR SI EL DNI YA EXISTE ---
+                      final docExistente = await FirebaseFirestore.instance
+                          .collection('usuarios')
+                          .doc(dniIngresado)
+                          .get();
+
+                      if (docExistente.exists) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('❌ Este DNI ya está registrado.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+
                       String idReal = await _obtenerIdReal();
                       DateTime hoy = DateTime.now();
 
-                      // // 3. Envío a Firebase (Ahora usando el DNI como ID)
+                      // 2. Guardar en Firebase
                       await FirebaseFirestore.instance
                           .collection('usuarios')
-                          .doc(_dniController.text
-                              .trim()) // <-- Definimos que el ID sea el DNI
+                          .doc(dniIngresado)
                           .set({
-                        // <-- Usamos .set para guardar
                         'nombre': _nombreController.text.trim(),
-                        'dni': _dniController.text.trim(),
+                        'dni': dniIngresado,
                         'domicilio': _domicilioController.text.trim(),
                         'email': _emailController.text.trim(),
                         'numerodecelular': _celularController.text.trim(),
                         'barrio': barrioSeleccionado,
                         'fechaRegistro': hoy,
-                        'rol': _dniController.text.trim() == '27901290' ? 1 : 3,
+                        'rol': dniIngresado == '27901290' ? 1 : 3,
                         'estado': 'pendiente',
-                        'codigoActivacion': '',
+                        'codigoActivacion': nuevoCodigo,
                         'deviceId': idReal,
                       });
 
+                      // 3. Persistencia local UNIFICADA (SharedPreferences)
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString(
+                          'nombre', _nombreController.text.trim());
+                      await prefs.setString(
+                          'numerodecelular', _celularController.text.trim());
+                      await prefs.setString(
+                          'domicilio', _domicilioController.text.trim());
+                      await prefs.setString('barrio', barrioSeleccionado ?? "");
+                      await prefs.setString('dni_usuario', dniIngresado);
+                      await prefs.setString('estado_usuario', 'pendiente');
+                      await prefs.setString('codigoGenerado', nuevoCodigo);
+
                       messenger.showSnackBar(
                         const SnackBar(
-                          content: Text(
-                              '✅ Registro enviado. Aguarde 48hs por su código.'),
+                          content: Text('✅ Registro enviado exitosamente.'),
                           backgroundColor: Colors.green,
                         ),
                       );
 
-                      // 4. LIMPIEZA DE CUADROS DE TEXTO
+                      // 4. Limpieza de controladores
                       _nombreController.clear();
                       _dniController.clear();
                       _domicilioController.clear();
                       _emailController.clear();
                       _celularController.clear();
 
-                      setState(() {
-                        barrioSeleccionado = null;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          barrioSeleccionado = null;
+                        });
 
-                      // 5. Navegación
+                        // 5. Navegación con delay
+                        await Future.delayed(const Duration(seconds: 2));
+                        if (!mounted) return;
+                        // 5. Navegación con delay
+                        await Future.delayed(const Duration(seconds: 2));
 
-                      await Future.delayed(const Duration(seconds: 2));
+                        // Esta es la forma que Flutter acepta sin protestar:
+                        if (!context.mounted) return;
 
-                      // Forma segura que no tira error en rojo:
-                      if (context.mounted) {
-                        if (_dniController.text.trim() == '27901290') {
-                          // CAMINO ADMIN: Entra directo al tablero de 6 botones
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AdminHomePage(),
-                            ),
-                          );
-                        } else {
-                          // CAMINO VECINO: Mantiene tu flujo original de validación
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ValidacionPage(),
-                            ),
-                          );
-                        }
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => const ValidacionPage(),
+                          ),
+                        );
                       }
                     } catch (e) {
                       messenger.showSnackBar(

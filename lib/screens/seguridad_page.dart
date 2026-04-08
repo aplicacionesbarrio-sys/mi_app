@@ -14,11 +14,27 @@ class SeguridadPage extends StatefulWidget {
 
 class _SeguridadPageState extends State<SeguridadPage>
     with WidgetsBindingObserver {
+  // Definimos el stream como una variable para evitar que se reconstruya innecesariamente
+  late Stream<QuerySnapshot> _alertasStream;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WakelockPlus.enable(); // Mantiene la pantalla encendida para el guardia
+    WakelockPlus.enable();
+    _inicializarStream();
+  }
+
+  void _inicializarStream() {
+    // Solo alertas de las últimas 4 horas
+    DateTime limite4Horas = DateTime.now().subtract(const Duration(hours: 4));
+
+    _alertasStream = FirebaseFirestore.instance
+        .collection('alertas')
+        .where('estado', isEqualTo: 'activa')
+        .where('fecha', isGreaterThan: limite4Horas)
+        .orderBy('fecha', descending: true)
+        .snapshots();
   }
 
   @override
@@ -32,27 +48,50 @@ class _SeguridadPageState extends State<SeguridadPage>
   Future<void> llamar(String celular) async {
     if (celular.isEmpty) return;
     final Uri tel = Uri.parse("tel:$celular");
-    if (await canLaunchUrl(tel)) {
-      await launchUrl(tel);
+    try {
+      if (await canLaunchUrl(tel)) {
+        await launchUrl(tel);
+      }
+    } catch (e) {
+      debugPrint("Error al llamar: $e");
     }
   }
 
   // 🗺️ FUNCIÓN NAVEGAR
   Future<void> abrirMapa(double lat, double lng) async {
     final Uri uri = Uri.parse("google.navigation:q=$lat,$lng&mode=d");
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback a web si falla el esquema de app nativa
+        final Uri httpsUri = Uri.parse(
+            "https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+        await launchUrl(httpsUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint("Error al abrir mapa: $e");
+    }
   }
 
-  // ✅ FUNCIÓN PARA FINALIZAR ALERTA (Cambia estado a 'resuelto')
+  // ✅ FUNCIÓN PARA FINALIZAR ALERTA
   Future<void> finalizarAlerta(String docId) async {
-    await FirebaseFirestore.instance.collection('alertas').doc(docId).update({
-      'estado':
-          'resuelto', // Al cambiar de 'activa' a 'resuelto', desaparece de la lista
-      'fecha_resolucion': FieldValue.serverTimestamp(),
-    });
+    try {
+      await FirebaseFirestore.instance.collection('alertas').doc(docId).update({
+        'estado': 'resuelto',
+        'fecha_resolucion': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Error al cerrar alerta: $e"),
+              backgroundColor: Colors.orange),
+        );
+      }
+    }
   }
 
-  // 🖼️ SELECCIÓN DE IMAGEN SEGÚN TIPO
   String obtenerImagenAlerta(String tipo) {
     switch (tipo.toLowerCase()) {
       case 'robo':
@@ -72,9 +111,6 @@ class _SeguridadPageState extends State<SeguridadPage>
 
   @override
   Widget build(BuildContext context) {
-    // Filtro de seguridad: solo mostrar alertas de las últimas 4 horas
-    DateTime limite4Horas = DateTime.now().subtract(const Duration(hours: 4));
-
     return Scaffold(
       backgroundColor: const Color(0xFFB71C1C),
       appBar: AppBar(
@@ -85,28 +121,29 @@ class _SeguridadPageState extends State<SeguridadPage>
                 fontSize: 18)),
         backgroundColor: Colors.red[900],
         centerTitle: true,
+        elevation: 10,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('alertas')
-            .where('estado', isEqualTo: 'activa')
-            .where('fecha', isGreaterThan: limite4Horas)
-            .orderBy('fecha', descending: true)
-            .snapshots(),
+        stream: _alertasStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                "Error: ${snapshot.error}",
-                style: const TextStyle(color: Colors.white),
-              ),
-            );
+                child: Text("Error: ${snapshot.error}",
+                    style: const TextStyle(color: Colors.white)));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+                child: CircularProgressIndicator(color: Colors.white));
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text("SIN ALERTAS ACTIVAS",
-                  style: TextStyle(color: Colors.white, fontSize: 18)),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
             );
           }
 
@@ -121,9 +158,11 @@ class _SeguridadPageState extends State<SeguridadPage>
               String nombre = alerta['nombre_vecino'] ?? 'Vecino';
               String celular = alerta['numerodecelular'] ?? '';
               String barrio = alerta['barrio_vecino'] ?? 'Barrio...';
-              GeoPoint pos = alerta['ubicacion'];
 
-              // 🕒 Formatear FECHA Y HORA (Ej: 13:19 - 06/04/2026)
+              // Blindaje de ubicación
+              GeoPoint? pos =
+                  alerta['ubicacion'] is GeoPoint ? alerta['ubicacion'] : null;
+
               String fechaHoraStr = "";
               if (alerta['fecha'] != null) {
                 DateTime f = (alerta['fecha'] as Timestamp).toDate();
@@ -131,18 +170,22 @@ class _SeguridadPageState extends State<SeguridadPage>
               }
 
               return Card(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withOpacity(0.5),
                 margin: const EdgeInsets.only(bottom: 15),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Colors.white24)),
+                    side: const BorderSide(color: Colors.white24, width: 2)),
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(15),
                   child: Column(
                     children: [
                       Row(
                         children: [
-                          Image.asset(obtenerImagenAlerta(tipo), height: 70),
+                          Image.asset(obtenerImagenAlerta(tipo),
+                              height: 70,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.warning,
+                                      color: Colors.white, size: 50)),
                           const SizedBox(width: 15),
                           Expanded(
                             child: Column(
@@ -162,34 +205,42 @@ class _SeguridadPageState extends State<SeguridadPage>
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.phone,
-                                color: Colors.greenAccent, size: 30),
-                            onPressed: () => llamar(celular),
+                          CircleAvatar(
+                            backgroundColor:
+                                Colors.greenAccent.withOpacity(0.2),
+                            child: IconButton(
+                              icon: const Icon(Icons.phone,
+                                  color: Colors.greenAccent),
+                              onPressed: () => llamar(celular),
+                            ),
                           ),
                         ],
                       ),
-                      const Divider(color: Colors.white24),
+                      const Divider(color: Colors.white24, height: 25),
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red[900],
-                                  foregroundColor: Colors.white),
-                              onPressed: () =>
-                                  abrirMapa(pos.latitude, pos.longitude),
+                                  backgroundColor: Colors.red[800],
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12))),
+                              onPressed: pos != null
+                                  ? () => abrirMapa(pos.latitude, pos.longitude)
+                                  : null,
                               icon: const Icon(Icons.navigation, size: 18),
                               label: const Text("MAPA"),
                             ),
                           ),
                           const SizedBox(width: 10),
-                          // ✅ BOTÓN RESUELTO
                           Expanded(
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green[800],
-                                  foregroundColor: Colors.white),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12))),
                               onPressed: () =>
                                   _confirmarResolucion(context, doc.id, nombre),
                               icon: const Icon(Icons.check_circle, size: 18),
@@ -209,28 +260,35 @@ class _SeguridadPageState extends State<SeguridadPage>
     );
   }
 
-  // 🛑 DIÁLOGO DE CONFIRMACIÓN
   void _confirmarResolucion(BuildContext context, String docId, String vecino) {
     showDialog(
       context: context,
+      barrierDismissible: false, // Obliga a elegir una opción
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("¿Finalizar Alerta?",
             style: TextStyle(color: Colors.white)),
         content: Text("¿Confirmas que la emergencia de $vecino fue atendida?",
             style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context), child: const Text("NO")),
+              onPressed: () => Navigator.pop(context),
+              child:
+                  const Text("CANCELAR", style: TextStyle(color: Colors.grey))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10))),
             onPressed: () {
               finalizarAlerta(docId);
               Navigator.pop(context);
-              HapticFeedback.lightImpact(); // Pequeña vibración de éxito
+              HapticFeedback.heavyImpact();
             },
-            child: const Text("SÍ, RESUELTO",
-                style: TextStyle(color: Colors.white)),
+            child: const Text("SÍ, FINALIZAR",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

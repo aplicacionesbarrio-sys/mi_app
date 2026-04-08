@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -6,71 +7,91 @@ import 'screens/registro_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'screens/inicio_page.dart';
-import 'screens/seguridad_page.dart'; // <--- IMPORTANTE: Nueva página
-import 'screens/admin_servicios_page.dart'; // <--- IMPORTANTE: Nueva página
+import 'screens/seguridad_page.dart';
+import 'screens/admin_servicios_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'screens/panel_reclamos.dart';
+import 'screens/validacion_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await pedirPermisos();
+
+  try {
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+    await pedirPermisos();
+  } catch (e) {
+    debugPrint("❌ Error crítico en inicialización: $e");
+  }
+
   runApp(const MyApp());
 }
 
 Future<Widget> verificarUsuario() async {
-  // 1. Obtenemos el ID único del celular
-  var build = await DeviceInfoPlugin().androidInfo;
-  String idCelu = build.id;
+  final prefs = await SharedPreferences.getInstance();
 
+  // 1. Intentamos obtener el ID del dispositivo
+  String idCelu = "";
+  try {
+    var build = await DeviceInfoPlugin().androidInfo;
+    idCelu = build.id;
+  } catch (e) {
+    debugPrint("❌ Error obteniendo Device ID: $e");
+    return const RegistroPage();
+  }
+
+  // 2. Auth Anónima silenciosa
   try {
     if (FirebaseAuth.instance.currentUser == null) {
       await FirebaseAuth.instance.signInAnonymously();
-      debugPrint("✅ Auth: Sesión anónima iniciada: $idCelu");
     }
   } catch (e) {
-    debugPrint("❌ Auth: Error: $e");
+    debugPrint("❌ Auth Error: $e");
   }
 
-  // 2. Buscamos en la colección 'usuarios'
-  var usuarioQuery = await FirebaseFirestore.instance
-      .collection('usuarios')
-      .where('deviceId', isEqualTo: idCelu)
-      .get();
+  // 3. Consultamos Firestore (Solo una vez para verificar estado y rol)
+  try {
+    var usuarioQuery = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .where('deviceId', isEqualTo: idCelu)
+        .limit(1) // Optimización de consulta
+        .get();
 
-  // 3. Decidimos a qué pantalla ir según el ROL
-  if (usuarioQuery.docs.isNotEmpty) {
-    var doc = usuarioQuery.docs.first;
-    var datos = doc.data();
+    if (usuarioQuery.docs.isNotEmpty) {
+      var datos = usuarioQuery.docs.first.data();
 
-    // Extraemos el rol (si no existe, por defecto es 3)
-    int rol = datos['rol'] ?? 3;
+      // Guardamos DNI para futuras consultas sin repetir este proceso
+      await prefs.setString('dni_usuario', usuarioQuery.docs.first.id);
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('nombre', datos['nombre'] ?? "Vecino");
-    await prefs.setString(
-        'numerodecelular', datos['numerodecelular'] ?? "Sin número");
-    await prefs.setString('barrio', datos['barrio'] ?? "Sin barrio");
-    debugPrint("🛡️ ACCESO: Usuario reconocido con ROL: $rol");
+      // --- Lógica de Validación ---
+      String estado = datos['estado'] ?? 'pendiente';
+      if (estado == 'pendiente') {
+        return const ValidacionPage();
+      }
 
-    // 🚀 Lógica de redirección profesional
-    if (rol == 2) {
-      debugPrint("🛰️ Entrando como Admin de Servicios");
-      return const AdminServiciosPage();
-    } else if (rol == 4) {
-      debugPrint("🚨 Entrando como Seguridad");
-      return const SeguridadPage();
-    } else if (rol == 5) {
-      // <--- ESTA ES LA QUE PEGASTE
-      debugPrint("📊 Entrando al Panel de Gestión (Rol 5)");
-      return const PanelReclamos();
+      // --- Lógica de Roles y Caché ---
+      int rol = datos['rol'] ?? 3;
+      await prefs.setString('nombre', datos['nombre'] ?? "Vecino");
+      await prefs.setString('barrio', datos['barrio'] ?? "Sin barrio");
+      await prefs.setInt('rol_usuario', rol);
+
+      // Redirección según rol
+      switch (rol) {
+        case 2:
+          return const AdminServiciosPage();
+        case 4:
+          return const SeguridadPage();
+        case 5:
+          return const PanelReclamos();
+        default:
+          return const InicioPage();
+      }
     } else {
-      debugPrint("🏠 Entrando como Vecino");
-      return const InicioPage();
+      return const RegistroPage();
     }
-  } else {
-    debugPrint("⚠️ Vecino nuevo, enviando a Registro.");
+  } catch (e) {
+    debugPrint("❌ Error en flujo de verificación: $e");
     return const RegistroPage();
   }
 }
@@ -82,27 +103,27 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      title: 'Barrio Seguro',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          primary: Colors.blue,
+          seedColor:
+              const Color(0xFF4F1E98), // Usando tu color violeta de admin
+          primary: const Color(0xFF4F1E98),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.blue,
+          backgroundColor: Color(0xFF4F1E98),
           foregroundColor: Colors.white,
           centerTitle: true,
-          elevation: 5,
+          elevation: 0,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
       ),
       home: FutureBuilder<Widget>(
         future: verificarUsuario(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
+            return const LoadingScreen();
           }
           return snapshot.data ?? const RegistroPage();
         },
@@ -111,12 +132,42 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<void> pedirPermisos() async {
-  LocationPermission permission = await Geolocator.requestPermission();
+// Una pantalla de carga con más estilo
+class LoadingScreen extends StatelessWidget {
+  const LoadingScreen({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        color: const Color(0xFF4F1E98),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shield, size: 80, color: Colors.white),
+            SizedBox(height: 20),
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 20),
+            Text("Iniciando Barrio Seguro...",
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> pedirPermisos() async {
+  bool serviceEnabled;
+  LocationPermission permission;
+
+  serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) return;
+
+  permission = await Geolocator.checkPermission();
   if (permission == LocationPermission.denied) {
-    debugPrint("Permiso denegado");
-  } else {
-    debugPrint("Permiso concedido");
+    permission = await Geolocator.requestPermission();
   }
 }

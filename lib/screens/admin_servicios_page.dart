@@ -1,17 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart'; // ✅ IMPORTANTE: Para realizar la llamada
+import 'package:url_launcher/url_launcher.dart';
 
 class AdminServiciosPage extends StatelessWidget {
   const AdminServiciosPage({super.key});
 
-  // 📞 FUNCIÓN PARA REALIZAR LA LLAMADA
-  Future<void> _realizarLlamada(String celular) async {
-    if (celular.isEmpty) return;
-    final Uri tel = Uri.parse("tel:$celular");
-    if (await canLaunchUrl(tel)) {
-      await launchUrl(tel);
+  // 🛡️ BLINDAJE: Función de llamada con protección anti-errores
+  Future<void> _realizarLlamada(BuildContext context, String celular) async {
+    if (celular.isEmpty) {
+      _mostrarMensaje(context, "El número de celular está vacío.");
+      return;
     }
+
+    // Limpiamos el string por si viene con espacios o guiones raros
+    final String cleanPhone = celular.replaceAll(RegExp(r'[^0-9+]'), '');
+    final Uri tel = Uri.parse("tel:$cleanPhone");
+
+    try {
+      if (await canLaunchUrl(tel)) {
+        await launchUrl(tel);
+      } else {
+        // --- PROTECCIÓN AQUÍ ---
+        if (!context.mounted) return;
+
+        _mostrarMensaje(context, "No se pudo abrir la aplicación de llamadas.");
+      }
+    } catch (e) {
+      // --- Y OTRA AQUÍ ---
+      if (!context.mounted) return;
+
+      _mostrarMensaje(context, "Error al intentar llamar: $e");
+    }
+  }
+
+  // 🛡️ BLINDAJE: Función auxiliar para avisar al usuario
+  void _mostrarMensaje(BuildContext context, String texto) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(texto), backgroundColor: Colors.redAccent),
+    );
   }
 
   @override
@@ -29,9 +55,17 @@ class AdminServiciosPage extends StatelessWidget {
             .orderBy('fecha', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+          // 🛡️ BLINDAJE: Control de errores de conexión
+          if (snapshot.hasError) {
+            return const Center(
+                child: Text("Error al cargar servicios. Reintentando..."));
           }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+                child: CircularProgressIndicator(color: Colors.orange));
+          }
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text("No hay pedidos activos"));
           }
@@ -39,11 +73,18 @@ class AdminServiciosPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(10),
             children: snapshot.data!.docs.map((doc) {
-              Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+              // 🛡️ BLINDAJE: Verificación de datos nulos para evitar el "red screen"
+              final data = doc.data() as Map<String, dynamic>? ?? {};
+
               bool fueContactado = data['contactoIniciado'] ?? false;
               String estadoPago = data['estadoPago'] ?? "debe";
               Color colorBorde = fueContactado ? Colors.green : Colors.orange;
-              String numeroCelular = data['numerodecelular'] ?? "";
+
+              // 🛡️ BLINDAJE: Aseguramos que los strings nunca sean nulos
+              String numeroCelular = data['numerodecelular']?.toString() ?? "";
+              String nombre =
+                  data['nombre']?.toString() ?? "Usuario Desconocido";
+              String tipo = data['tipo']?.toString() ?? "Servicio";
 
               return Card(
                 elevation: 4,
@@ -61,15 +102,15 @@ class AdminServiciosPage extends StatelessWidget {
                       children: [
                         ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text("${data['nombre']} - ${data['tipo']}",
+                          title: Text("$nombre - $tipo",
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold, fontSize: 16)),
                           subtitle: Text("Cel: $numeroCelular"),
-                          // 📞 BOTÓN DE LLAMADA DIRECTA
                           trailing: IconButton(
                             icon: const Icon(Icons.phone_forwarded,
                                 color: Colors.green, size: 30),
-                            onPressed: () => _realizarLlamada(numeroCelular),
+                            onPressed: () =>
+                                _realizarLlamada(context, numeroCelular),
                           ),
                         ),
                         const Divider(),
@@ -83,18 +124,33 @@ class AdminServiciosPage extends StatelessWidget {
                                     : Colors.orange,
                                 foregroundColor: Colors.white,
                               ),
-                              onPressed: () => doc.reference
-                                  .update({'contactoIniciado': !fueContactado}),
+                              onPressed: () async {
+                                // 🛡️ BLINDAJE: Try-catch para actualizaciones en la nube
+                                try {
+                                  await doc.reference.update(
+                                      {'contactoIniciado': !fueContactado});
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  _mostrarMensaje(
+                                      context, "Error al actualizar contacto");
+                                }
+                              },
                               child: Text(fueContactado
                                   ? "Contactado ✅"
                                   : "Marcar Contacto"),
                             ),
                             TextButton.icon(
-                              onPressed: () {
-                                String nuevoEstado =
-                                    (estadoPago == "debe") ? "pago" : "debe";
-                                doc.reference
-                                    .update({'estadoPago': nuevoEstado});
+                              onPressed: () async {
+                                try {
+                                  String nuevoEstado =
+                                      (estadoPago == "debe") ? "pago" : "debe";
+                                  await doc.reference
+                                      .update({'estadoPago': nuevoEstado});
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  _mostrarMensaje(
+                                      context, "Error al actualizar pago");
+                                }
                               },
                               icon: Icon(
                                 estadoPago == "pago"
@@ -139,9 +195,14 @@ class AdminServiciosPage extends StatelessWidget {
               child: const Text("CANCELAR")),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              ref.delete();
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await ref.delete();
+                if (context.mounted) Navigator.pop(context);
+              } catch (e) {
+                if (!context.mounted) return;
+                _mostrarMensaje(context, "No se pudo borrar el documento");
+              }
             },
             child: const Text("BORRAR", style: TextStyle(color: Colors.white)),
           ),

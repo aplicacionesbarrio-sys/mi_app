@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class VistaEntidadScreen extends StatelessWidget {
-  const VistaEntidadScreen({super.key}); // Esto quita el aviso de la línea 5
+  const VistaEntidadScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -20,54 +21,147 @@ class _MapaEntidad extends StatefulWidget {
 
 class _MapaEntidadState extends State<_MapaEntidad> {
   Set<Marker> _markers = {};
+  // Guardamos las suscripciones para cancelarlas al cerrar la pantalla
+  final List<StreamSubscription> _subscriptions = [];
 
   @override
   void initState() {
     super.initState();
-    _escucharAlertas();
+    _conectarFuentesDeDatos();
   }
 
-  void _escucharAlertas() {
-    FirebaseFirestore.instance
-        .collection('reclamos')
+  @override
+  void dispose() {
+    // Limpieza de memoria
+    for (var sub in _subscriptions) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
+
+  void _conectarFuentesDeDatos() {
+    // Escuchamos múltiples colecciones para tener un mapa completo
+    _escucharColeccion('reclamos', BitmapDescriptor.hueBlue);
+    _escucharColeccion('alertas', BitmapDescriptor.hueRed);
+    _escucharColeccion('servicios', BitmapDescriptor.hueOrange);
+  }
+
+  void _escucharColeccion(String nombreColeccion, double colorHue) {
+    final sub = FirebaseFirestore.instance
+        .collection(nombreColeccion)
+        .where('estado',
+            isEqualTo: 'pendiente') // Solo mostrar lo que falta resolver
         .snapshots()
         .listen((snapshot) {
-      Set<Marker> nuevosMarkers = {};
-      for (var doc in snapshot.docs) {
-        var data = doc.data();
-        if (data['ubicacion'] != null) {
-          GeoPoint pos = data['ubicacion'];
-          nuevosMarkers.add(
-            Marker(
-              markerId: MarkerId(doc.id),
-              position: LatLng(pos.latitude, pos.longitude),
-              infoWindow: InfoWindow(
-                title: data['tipo'] ?? 'Alerta',
-                snippet: 'Vecino: ${data['nombre_vecino'] ?? "Anónimo"}',
-              ),
-            ),
-          );
-        }
-      }
-      if (mounted) {
-        setState(() {
-          _markers = nuevosMarkers;
-        });
-      }
+      _actualizarMarcadores(snapshot, colorHue);
     });
+    _subscriptions.add(sub);
+  }
+
+  void _actualizarMarcadores(QuerySnapshot snapshot, double colorHue) {
+    Set<Marker> nuevosMarkers = Set.from(_markers);
+
+    // Eliminamos marcadores de esta colección que ya no estén (o se hayan resuelto)
+    // Para simplificar en este ejemplo, reconstruimos los marcadores de la colección
+    for (var doc in snapshot.docs) {
+      var data = doc.data() as Map<String, dynamic>;
+      if (data['ubicacion'] != null) {
+        GeoPoint pos = data['ubicacion'];
+
+        nuevosMarkers.add(
+          Marker(
+            markerId: MarkerId(doc.id),
+            position: LatLng(pos.latitude, pos.longitude),
+            icon: BitmapDescriptor.defaultMarkerWithHue(colorHue),
+            infoWindow: InfoWindow(
+              title: "${data['tipo'] ?? 'Aviso'}".toUpperCase(),
+              snippet:
+                  'Vecino: ${data['nombre'] ?? "Anónimo"}\nDom: ${data['domicilio'] ?? ""}',
+            ),
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() => _markers = nuevosMarkers);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Mapa de Comisaría")),
-      body: GoogleMap(
-        initialCameraPosition: const CameraPosition(
-          target: LatLng(-29.4110, -66.8506), // Centro de La Rioja
-          zoom: 14,
-        ),
-        markers: _markers,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1A237E),
+        title: const Text("MONITOREO EN TIEMPO REAL",
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () =>
+                setState(() => _markers.clear()), // Limpiar y recargar
+          )
+        ],
       ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(-29.4110, -66.8506), // La Rioja
+              zoom: 13,
+            ),
+            markers: _markers,
+            myLocationEnabled: true,
+            mapType: MapType.normal,
+          ),
+          _buildLeyenda(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeyenda() {
+    return Positioned(
+      bottom: 20,
+      left: 10,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 5)],
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _LeyendaItem(color: Colors.red, texto: "Alertas"),
+            _LeyendaItem(color: Colors.blue, texto: "Reclamos"),
+            _LeyendaItem(color: Colors.orange, texto: "Servicios"),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LeyendaItem extends StatelessWidget {
+  final Color color;
+  final String texto;
+  const _LeyendaItem({required this.color, required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.location_on, color: color, size: 18),
+        const SizedBox(width: 5),
+        Text(texto,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }
