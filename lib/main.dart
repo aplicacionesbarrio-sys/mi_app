@@ -107,17 +107,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor:
-              const Color(0xFF4F1E98), // Usando tu color violeta de admin
-          primary: const Color(0xFF4F1E98),
+          seedColor: Colors.blue,
+          primary: Colors.blue,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF4F1E98),
+          backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           centerTitle: true,
           elevation: 0,
         ),
-        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+        scaffoldBackgroundColor: const Color.fromARGB(255, 187, 233, 246),
       ),
       home: FutureBuilder<Widget>(
         future: verificarUsuario(),
@@ -141,17 +140,17 @@ class LoadingScreen extends StatelessWidget {
     return Scaffold(
       body: Container(
         width: double.infinity,
-        color: const Color(0xFF4F1E98),
+        color: const Color.fromARGB(255, 187, 233, 246),
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.shield, size: 80, color: Colors.white),
+            Icon(Icons.shield, size: 80, color: Colors.blue),
             SizedBox(height: 20),
-            CircularProgressIndicator(color: Colors.white),
+            CircularProgressIndicator(color: Colors.blue),
             SizedBox(height: 20),
             Text("Iniciando Barrio Seguro...",
                 style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                    TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
           ],
         ),
       ),

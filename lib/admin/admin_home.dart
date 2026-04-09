@@ -8,11 +8,9 @@ class AdminHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[200],
       appBar: AppBar(
         title: const Text('Tablero de Administrador',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color.fromARGB(255, 79, 30, 152),
         elevation: 4,
         centerTitle: true,
       ),

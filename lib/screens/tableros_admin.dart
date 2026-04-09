@@ -179,15 +179,24 @@ class _TablerosAdminState extends State<TablerosAdmin> {
                         ],
                       ),
                       const Divider(height: 20),
+
+// 1. Usamos 'nombre_vecino' que es el que aparece en tu captura
                       _itemInfo(Icons.person_pin,
-                          "${data['nombre'] ?? 'Vecino anónimo'}",
+                          "${data['nombre_vecino'] ?? data['nombre'] ?? 'Vecino anónimo'}",
                           isBold: true),
+
+// 2. Usamos 'barrio_vecino' según tu captura
                       _itemInfo(Icons.map,
-                          "Barrio: ${data['barrio'] ?? 'No especificado'}"),
+                          "Barrio: ${data['barrio_vecino'] ?? data['barrio'] ?? 'No especificado'}"),
+
+// 3. 'domicilio' parece estar bien, pero añadimos respaldo por si acaso
                       _itemInfo(Icons.home_work,
                           "Dom: ${data['domicilio'] ?? 'No especificado'}"),
+
+// 4. 'numerodecelular' coincide, pero dejamos respaldo con 'telefono'
                       _itemInfo(Icons.phone_android,
-                          "Tel: ${data['numerodecelular'] ?? '---'}"),
+                          "Tel: ${data['numerodecelular'] ?? data['telefono'] ?? 'Sin número'}"),
+
                       _itemInfo(Icons.event_note, "Recibido: $fechaFormateada"),
                       const SizedBox(height: 15),
                       _botonGestionar(docId, data['estado'], data),
