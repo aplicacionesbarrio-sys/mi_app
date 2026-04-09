@@ -97,11 +97,17 @@ class _TablerosAdminState extends State<TablerosAdmin> {
   Widget _buildListaDeDatos() {
     return StreamBuilder<QuerySnapshot>(
       // AHORA ES INTELIGENTE: Si es usuarios, busca 'fechaRegistro', si no, busca 'fecha'
-      stream: FirebaseFirestore.instance
-          .collection(coleccionActual)
-          .orderBy(coleccionActual == 'usuarios' ? 'fechaRegistro' : 'fecha',
-              descending: true)
-          .snapshots(),
+      stream: (coleccionActual == 'usuarios_pagos')
+          ? FirebaseFirestore.instance
+              .collection('usuarios')
+              .where('rol', isEqualTo: 3)
+              .snapshots()
+          : FirebaseFirestore.instance
+              .collection(coleccionActual)
+              .orderBy(
+                  coleccionActual == 'usuarios' ? 'fechaRegistro' : 'fecha',
+                  descending: true)
+              .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -233,7 +239,26 @@ class _TablerosAdminState extends State<TablerosAdmin> {
           label: Text(esUsuario ? "GENERAR CÓDIGO" : "GESTIONAR ESTADO"),
         ),
         if (esUsuario) ...[
-          const SizedBox(height: 10),
+          // --- ESTE ES EL BOTÓN NUEVO ---
+
+          if (widget.categoriaInicial == 'usuarios_pagos' ||
+              (widget.categoriaInicial == 'usuarios' && datos['rol'] == 3))
+            ElevatedButton.icon(
+              onPressed: () => _mostrarControlPago(docId),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 79, 30, 152),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 45),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.monetization_on, size: 20),
+              label: const Text("CONTROL DE PAGO"),
+            ),
+
+          const SizedBox(height: 10), // Un espacio entre los dos botones
+
+          // --- ESTE ES TU BOTÓN DE WHATSAPP QUE YA TENÍAS (No se toca) ---
           ElevatedButton.icon(
             onPressed: () => _lanzarWhatsApp(telefono),
             style: ElevatedButton.styleFrom(
@@ -248,6 +273,63 @@ class _TablerosAdminState extends State<TablerosAdmin> {
           ),
         ],
       ],
+    );
+  }
+
+  void _mostrarControlPago(String docId) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("GESTIONAR PAGO",
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color.fromARGB(255, 79, 30, 152))),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("📅 PLANES DE ACCESO",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _botonPlan(dialogContext, docId, "30 D", 30),
+                  _botonPlan(dialogContext, docId, "60 D", 60),
+                  _botonPlan(dialogContext, docId, "90 D", 90),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text("💬 RECORDATORIOS WSP",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const Divider(),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _botonWhatsApp(docId, "5 DÍAS"),
+                  _botonWhatsApp(docId, "3 DÍAS"),
+                  _botonWhatsApp(docId, "HOY"),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text("🛡️ SEGURIDAD",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const Divider(),
+              _botonBloqueo(docId),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("CERRAR"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -463,5 +545,92 @@ class _TablerosAdminState extends State<TablerosAdmin> {
         ],
       ),
     );
+  }
+
+  Widget _botonPlan(
+      BuildContext context, String docId, String etiqueta, int dias) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color.fromARGB(255, 79, 30, 152),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+      ),
+      onPressed: () async {
+        final nav = Navigator.of(context);
+        // Calculamos la fecha sumando los días al día de hoy
+        final fechaVencimiento = DateTime.now().add(Duration(days: dias));
+
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(docId)
+            .update({
+          'estadoPago': 'al_dia',
+          'fechaVencimiento': fechaVencimiento,
+        });
+        nav.pop(); // Cerramos el cartel al terminar
+      },
+      child: Text(etiqueta,
+          style: const TextStyle(color: Colors.white, fontSize: 11)),
+    );
+  }
+
+  Widget _botonWhatsApp(String docId, String dias) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green.shade700,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+      onPressed: () async {
+        final doc = await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(docId)
+            .get();
+        if (doc.exists) {
+          String telefono = doc.data()?['telefono'] ?? "";
+          String nombre = doc.data()?['nombre'] ??
+              "Vecino"; // Borramos la línea de 'nombre' y el comentario
+          if (telefono.isNotEmpty) {
+            _abrirWhatsApp(telefono,
+                "Hola $nombre, te recordamos del Barrio que tu plan de acceso vence en $dias. Por favor, realizá tu pago para evitar inconvenientes.");
+          }
+        }
+      },
+      icon: const Icon(Icons.message, size: 16, color: Colors.white),
+      label: Text("AVISO $dias",
+          style: const TextStyle(color: Colors.white, fontSize: 10)),
+    );
+  }
+
+  Widget _botonBloqueo(String docId) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.black,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+      onPressed: () async {
+        // Aquí podrías cambiar el estado a 'bloqueado' o similar
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(docId)
+            .update({
+          'estadoPago': 'vencido',
+          'accesoPermitido': false, // Si tenés este campo en tu BD
+        });
+      },
+      icon: const Icon(Icons.block, size: 16, color: Colors.white),
+      label: const Text("BLOQUEAR ACCESO",
+          style: TextStyle(color: Colors.white, fontSize: 10)),
+    );
+  }
+
+  Future<void> _abrirWhatsApp(String telefono, String mensaje) async {
+    // Limpiamos el número por si tiene espacios o guiones
+    final numeroLimpio = telefono.replaceAll(RegExp(r'[^\d]'), '');
+    final url =
+        "https://wa.me/$numeroLimpio?text=${Uri.encodeComponent(mensaje)}";
+
+    // Intentamos lanzar la URL
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {}
   }
 }

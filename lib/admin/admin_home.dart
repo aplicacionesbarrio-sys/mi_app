@@ -89,22 +89,6 @@ class AdminHomePage extends StatelessWidget {
             },
           ),
 
-          // 4. ESTADÍSTICAS RÁPIDAS
-          _buildSmartCard(
-            context,
-            title: '📊 ESTADÍSTICAS RÁPIDAS',
-            subtitleNormal: 'Actividad de hoy',
-            subtitleAlert: 'RESUELTOS HOY',
-            icon: Icons.bar_chart,
-            baseColor: const Color(0xFFFFFDE7),
-            activeColor: Colors.amber.shade700,
-            iconColor: Colors.green,
-            query: FirebaseFirestore.instance
-                .collection('alertas')
-                .where('estado', isEqualTo: 'resuelta'),
-            onTap: () => debugPrint("Abrir Estadísticas"),
-          ),
-
           // 5. FÁBRICA DE CÓDIGOS
           _buildSmartCard(
             context,
@@ -140,7 +124,16 @@ class AdminHomePage extends StatelessWidget {
             query: FirebaseFirestore.instance
                 .collection('usuarios')
                 .where('estadoPago', isEqualTo: 'vencido'),
-            onTap: () => debugPrint("Abrir Pagos"),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TablerosAdmin(
+                      categoriaInicial:
+                          'usuarios_pagos'), // Usamos la categoría de usuarios
+                ),
+              );
+            },
           ),
         ],
       ),
