@@ -250,21 +250,6 @@ class _TablerosAdminState extends State<TablerosAdmin> {
         if (esUsuario) ...[
           // --- ESTE ES EL BOTÓN NUEVO ---
 
-          if (widget.categoriaInicial == 'usuarios_pagos' ||
-              (widget.categoriaInicial == 'usuarios' && datos['rol'] == 3))
-            ElevatedButton.icon(
-              onPressed: () => _mostrarControlPago(docId),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 79, 30, 152),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 45),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.monetization_on, size: 20),
-              label: const Text("CONTROL DE PAGO"),
-            ),
-
           const SizedBox(height: 10), // Un espacio entre los dos botones
 
           // --- ESTE ES TU BOTÓN DE WHATSAPP QUE YA TENÍAS (No se toca) ---
@@ -395,12 +380,12 @@ class _TablerosAdminState extends State<TablerosAdmin> {
               const Text("ACTUALIZAR ESTADO",
                   style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
               const SizedBox(height: 10),
-              _opcionEstado(id, "finalizado", Icons.check_circle, Colors.green,
-                  "Marcar como Finalizado"),
+              _opcionEstado(
+                  id, "finalizado", Icons.check_circle, Colors.green, "PAGÓ"),
               _opcionEstado(id, "pendiente", Icons.pending_actions,
-                  Colors.orange, "Volver a Pendiente"),
-              _opcionEstado(id, "cancelado", Icons.cancel, Colors.red,
-                  "Cancelar / Rechazar"),
+                  Colors.orange, "PENDIENTE"),
+              _opcionEstado(
+                  id, "cancelado", Icons.cancel, Colors.red, "NO PAGÓ"),
               const SizedBox(height: 20),
             ],
           ),
@@ -565,17 +550,41 @@ class _TablerosAdminState extends State<TablerosAdmin> {
       ),
       onPressed: () async {
         final nav = Navigator.of(context);
-        // Calculamos la fecha sumando los días al día de hoy
-        final fechaVencimiento = DateTime.now().add(Duration(days: dias));
 
-        await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(docId)
-            .update({
-          'estadoPago': 'al_dia',
-          'fechaVencimiento': fechaVencimiento,
-        });
-        nav.pop(); // Cerramos el cartel al terminar
+        // 1. Calculamos la fecha de hoy y la de vencimiento
+        final ahora = DateTime.now();
+        final fechaVencimiento = ahora.add(Duration(days: dias));
+
+        try {
+          // 2. Actualizamos Firebase con más información útil
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(docId)
+              .update({
+            'estadoPago': 'al_dia',
+            'fechaVencimiento':
+                fechaVencimiento, // Clave para el bloqueo automático
+            'fechaUltimoPago': ahora, // Para saber cuándo te pagó
+            'planContratado': dias, // Para saber si compró 30, 60 o 90
+            'accesoPermitido':
+                true, // Le devolvemos el acceso si estaba bloqueado
+          });
+
+          // 3. Cerramos el diálogo y avisamos que salió bien
+          nav.pop();
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("✅ Plan de $dias días activado con éxito"),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          // Si algo falla (ej: sin internet), avisamos
+          print("Error al actualizar pago: $e");
+        }
       },
       child: Text(etiqueta,
           style: const TextStyle(color: Colors.white, fontSize: 11)),
