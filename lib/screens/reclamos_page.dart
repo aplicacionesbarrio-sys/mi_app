@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 import '../widgets_personalizados.dart';
 import 'servicios_page.dart';
+import 'package:geocoding/geocoding.dart';
 
 class ReclamosPage extends StatefulWidget {
   const ReclamosPage({super.key});
@@ -23,6 +24,13 @@ class _ReclamosPageState extends State<ReclamosPage> {
   String direccionVecinoReal = "Cargando...";
   final TextEditingController _detalleController = TextEditingController();
   final TextEditingController _ubicacionController = TextEditingController();
+
+  Map<String, bool> reclamosBloqueados = {
+    "pérdida de agua": false,
+    "cable caído": false,
+    "pérdida de gas": false,
+    "daños en vía pública": false
+  };
 
   // FUNCIÓN PARA ENVIAR RECLAMO CON GPS REAL (MULTIDESTINO)
   Future<void> enviarReclamoAlFirebase(
@@ -64,6 +72,21 @@ class _ReclamosPageState extends State<ReclamosPage> {
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
+      String direccionGps = "Sin dirección especificada";
+
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+            position.latitude, position.longitude);
+
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks[0];
+          direccionGps = "${place.street}";
+          _ubicacionController.text = direccionGps;
+        }
+      } catch (e) {
+        debugPrint("Error obteniendo dirección: $e");
+      }
+
       await FirebaseFirestore.instance.collection('reclamos').add({
         'tipo': tipoRecibido,
         'nombre': nombreUsuario,
@@ -75,11 +98,10 @@ class _ReclamosPageState extends State<ReclamosPage> {
         'empresa_destino': empresasDestino,
         'domicilio': _ubicacionController.text.trim().isNotEmpty
             ? _ubicacionController.text.trim()
-            : "Sin dirección especificada",
+            : direccionGps,
         'detalle': _detalleController.text.trim().isNotEmpty
             ? _detalleController.text.trim()
             : "Sin detalle especificado",
-        // CORRECCIÓN AQUÍ: Se agregó el $ y se cerró bien el string
         'link_mapa':
             "https://www.google.com/maps?q=${position.latitude},${position.longitude}",
       });
@@ -90,13 +112,6 @@ class _ReclamosPageState extends State<ReclamosPage> {
       setState(() => mensajeConfirmacion = "Error al enviar: $e");
     }
   }
-
-  Map<String, bool> reclamosBloqueados = {
-    "pérdida de agua": false,
-    "cable caído": false,
-    "pérdida de gas": false,
-    "daños en vía pública": false
-  };
 
   @override
   void initState() {
