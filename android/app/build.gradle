@@ -17,13 +17,13 @@ def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '
 def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
 
 android {
-    // 🛡️ BLINDAJE: Namespace único para evitar conflictos en el Play Store
+    // 🛡️ BLINDAJE: Namespace único para evitar conflictos
     namespace "com.barriovigilado.barriouroseguro"
-    compileSdk 34
+    compileSdkVersion 35
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        // 🛡️ BLINDAJE: Forzamos Java 17 para que Firebase no tire error de compatibilidad
+        // 🛡️ BLINDAJE: Forzamos Java 17 para compatibilidad con Firebase
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -39,21 +39,22 @@ android {
     defaultConfig {
         applicationId "com.barriovigilado.barriouroseguro"
         
-        // 🛡️ BLINDAJE: Subimos a 23 para evitar errores con permisos modernos y librerías de Google
+        // 🛡️ BLINDAJE: Mínimo SDK 23 para permisos modernos
         minSdkVersion 23 
         
-        targetSdkVersion flutter.targetSdkVersion
+        // 🛡️ CORRECCIÓN: Forzamos 35 para que los plugins nuevos no reboten
+        targetSdkVersion 35 
+        
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         
-        // 🛡️ BLINDAJE: Esto evita que la app "explote" si agregás muchas librerías (Firebase, Maps, etc)
+        // 🛡️ BLINDAJE: Evita errores por exceso de librerías
         multiDexEnabled true
     }
 
     buildTypes {
         release {
             signingConfig signingConfigs.debug
-            // 🛡️ BLINDAJE: Optimización de código (opcional, pero ayuda a que la app sea más liviana)
             minifyEnabled false
             shrinkResources false
         }
