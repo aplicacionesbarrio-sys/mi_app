@@ -71,7 +71,8 @@ class _InicioPageState extends State<InicioPage> {
             context,
             MaterialPageRoute(builder: (context) => const AdminHomePage()),
           );
-        } else if (estado == 'pendiente' && !yaValidoCodigo && rol == 3) {
+          // CAMBIÁ LA LÍNEA 74 POR ESTA:
+        } else if (estado == 'pendiente' && rol == 3) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const ValidacionPage()),

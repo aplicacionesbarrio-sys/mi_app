@@ -183,21 +183,22 @@ class _TablerosAdminState extends State<TablerosAdmin> {
                       const Divider(height: 20),
 
 // 1. Usamos 'nombre_vecino' que es el que aparece en tu captura
+                      // 1. Nombre (En tu Firebase es 'nombre')
                       _itemInfo(Icons.person_pin,
-                          "${data['nombre_vecino'] ?? data['nombre'] ?? 'Vecino anónimo'}",
+                          "${data['nombre'] ?? 'Vecino anónimo'}",
                           isBold: true),
 
-// 2. Usamos 'barrio_vecino' según tu captura
+// 2. Barrio (En tu Firebase es 'barrio')
                       _itemInfo(Icons.map,
-                          "Barrio: ${data['barrio_vecino'] ?? data['barrio'] ?? 'No especificado'}"),
+                          "Barrio: ${data['barrio'] ?? 'No especificado'}"),
 
-// 3. 'domicilio' parece estar bien, pero añadimos respaldo por si acaso
+// 3. Domicilio (En tu Firebase es 'domicilio')
                       _itemInfo(Icons.home_work,
                           "Dom: ${data['domicilio'] ?? 'No especificado'}"),
 
-// 4. 'numerodecelular' coincide, pero dejamos respaldo con 'telefono'
+// 4. Teléfono (En tu Firebase es 'numerodecelular')
                       _itemInfo(Icons.phone_android,
-                          "Tel: ${data['numerodecelular'] ?? data['telefono'] ?? 'Sin número'}"),
+                          "Tel: ${data['numerodecelular'] ?? 'Sin número'}"),
 
                       _itemInfo(Icons.event_note, "Recibido: $fechaFormateada"),
                       const SizedBox(height: 15),
@@ -601,7 +602,7 @@ class _TablerosAdminState extends State<TablerosAdmin> {
           }
         } catch (e) {
           // Si algo falla (ej: sin internet), avisamos
-          print("Error al actualizar pago: $e");
+          debugPrint("Error al actualizar pago: $e");
         }
       },
       child: Text(etiqueta,

@@ -19,7 +19,7 @@ def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '
 android {
     // 🛡️ BLINDAJE: Namespace único para evitar conflictos en el Play Store
     namespace "com.barriovigilado.barriouroseguro"
-    compileSdk flutter.compileSdkVersion
+    compileSdk 34
     ndkVersion flutter.ndkVersion
 
     compileOptions {

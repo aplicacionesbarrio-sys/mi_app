@@ -30,13 +30,14 @@ void main() async {
 
 Future<Widget> verificarUsuario() async {
   final prefs = await SharedPreferences.getInstance();
-  bool pendiente = prefs.getBool('registro_pendiente') ?? false;
-  if (pendiente) return const ValidacionPage();
+  // bool pendiente = prefs.getBool('registro_pendiente') ?? false;
+  //if (pendiente) return const ValidacionPage();
   // 1. Intentamos obtener el ID del dispositivo
   String idCelu = "";
   try {
     var build = await DeviceInfoPlugin().androidInfo;
-    idCelu = build.id;
+// CAMBIAMOS build.id por una combinación más segura:
+    idCelu = build.model + build.fingerprint;
   } catch (e) {
     debugPrint("❌ Error obteniendo Device ID: $e");
     return const RegistroPage();

@@ -43,21 +43,23 @@ class _ValidacionPageState extends State<ValidacionPage> {
 
       if (doc.exists && doc.data()?['codigoActivacion'] == codigo) {
         await doc.reference.update({
-          'estado': 'validado',
+          'estado': 'activado', // 1. CAMBIADO: de 'validado' a 'activado'
           'codigoValidado': true,
         });
 
         await prefs.setBool('codigoValidado', true);
-        await prefs.setString('estado_usuario', 'validado');
+        await prefs.setString('estado_usuario',
+            'activado'); // 2. CAMBIADO: de 'validado' a 'activado'
 
-        if (!mounted) return;
         await prefs.setBool('registro_pendiente', false);
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const InicioPage()),
           (route) => false,
         );
       } else {
+        // ... el resto queda igual
         if (!mounted) return;
         _mostrarSnackBar("Código incorrecto. Verificá y reintentá.",
             isError: true);

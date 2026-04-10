@@ -20,7 +20,7 @@ class _MapaEntidad extends StatefulWidget {
 }
 
 class _MapaEntidadState extends State<_MapaEntidad> {
-  Set<Marker> _markers = {};
+  Map<String, Marker> _markersMap = {};
   // Guardamos las suscripciones para cancelarlas al cerrar la pantalla
   final List<StreamSubscription> _subscriptions = [];
 
@@ -49,42 +49,42 @@ class _MapaEntidadState extends State<_MapaEntidad> {
   void _escucharColeccion(String nombreColeccion, double colorHue) {
     final sub = FirebaseFirestore.instance
         .collection(nombreColeccion)
-        .where('estado',
-            isEqualTo: 'pendiente') // Solo mostrar lo que falta resolver
+        .where('estado', isEqualTo: 'pendiente')
         .snapshots()
         .listen((snapshot) {
-      _actualizarMarcadores(snapshot, colorHue);
+      // ESTA ES LA LÍNEA QUE CAMBIA:
+      _procesarSnapshot(snapshot, colorHue, nombreColeccion);
     });
     _subscriptions.add(sub);
   }
 
-  void _actualizarMarcadores(QuerySnapshot snapshot, double colorHue) {
-    Set<Marker> nuevosMarkers = Set.from(_markers);
+  void _procesarSnapshot(
+      QuerySnapshot snapshot, double colorHue, String coleccion) {
+    // 1. Borramos del mapa solo los marcadores de la colección que se acaba de actualizar
+    _markersMap.removeWhere((key, value) => key.startsWith('$coleccion-'));
 
-    // Eliminamos marcadores de esta colección que ya no estén (o se hayan resuelto)
-    // Para simplificar en este ejemplo, reconstruimos los marcadores de la colección
+    // 2. Agregamos los que están pendientes actualmente
     for (var doc in snapshot.docs) {
       var data = doc.data() as Map<String, dynamic>;
       if (data['ubicacion'] != null) {
         GeoPoint pos = data['ubicacion'];
+        String markerId = '$coleccion-${doc.id}'; // ID único para no mezclar
 
-        nuevosMarkers.add(
-          Marker(
-            markerId: MarkerId(doc.id),
-            position: LatLng(pos.latitude, pos.longitude),
-            icon: BitmapDescriptor.defaultMarkerWithHue(colorHue),
-            infoWindow: InfoWindow(
-              title: "${data['tipo'] ?? 'Aviso'}".toUpperCase(),
-              snippet:
-                  'Vecino: ${data['nombre'] ?? "Anónimo"}\nDom: ${data['domicilio'] ?? ""}',
-            ),
+        _markersMap[markerId] = Marker(
+          markerId: MarkerId(markerId),
+          position: LatLng(pos.latitude, pos.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(colorHue),
+          infoWindow: InfoWindow(
+            title: "${data['tipo'] ?? 'Aviso'}".toUpperCase(),
+            snippet:
+                'Vecino: ${data['nombre'] ?? "Anónimo"}\nDom: ${data['domicilio'] ?? ""}',
           ),
         );
       }
     }
 
     if (mounted) {
-      setState(() => _markers = nuevosMarkers);
+      setState(() {});
     }
   }
 
@@ -103,7 +103,7 @@ class _MapaEntidadState extends State<_MapaEntidad> {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () =>
-                setState(() => _markers.clear()), // Limpiar y recargar
+                setState(() => _markersMap.clear()), // Limpiar y recargar
           )
         ],
       ),
@@ -114,7 +114,7 @@ class _MapaEntidadState extends State<_MapaEntidad> {
               target: LatLng(-29.4110, -66.8506), // La Rioja
               zoom: 13,
             ),
-            markers: _markers,
+            markers: _markersMap.values.toSet(),
             myLocationEnabled: true,
             mapType: MapType.normal,
           ),

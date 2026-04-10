@@ -113,7 +113,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
   @override
   void initState() {
     super.initState();
-    print("🚀🚀🚀 LA PÁGINA DE SERVICIOS SE ABRIÓ 🚀🚀🚀"); // Agregá esto
+    debugPrint("🚀🚀🚀 LA PÁGINA DE SERVICIOS SE ABRIÓ 🚀🚀🚀"); // Agregá esto
     _cargarEstadoBloqueos();
     obtenerDatosUsuario();
   }
@@ -125,7 +125,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   Future<void> obtenerDatosUsuario() async {
-    print("🔍 INICIANDO BÚSQUEDA DE USUARIO..."); // Ojo 1
+    debugPrint("🔍 INICIANDO BÚSQUEDA DE USUARIO..."); // Ojo 1
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     // Prioridad 1: Cargar lo que tengamos en SharedPreferences para respuesta instantánea
@@ -138,20 +138,20 @@ class _ServiciosPageState extends State<ServiciosPage> {
 
     try {
       String deviceIdLimpio = await _getDeviceIdLimpio();
-      print("🆔 MI ID GENERADO ES: $deviceIdLimpio"); // Ojo 2
+      debugPrint("🆔 MI ID GENERADO ES: $deviceIdLimpio"); // Ojo 2
       var query = await FirebaseFirestore.instance
           .collection('usuarios')
           .where('deviceId', isEqualTo: deviceIdLimpio)
           .limit(1)
           .get();
-      print(
+      debugPrint(
           "📊 DOCUMENTOS ENCONTRADOS EN FIREBASE: ${query.docs.length}"); // Ojo
-      print("RESULTADO QUERY: ${query.docs.length}");
-      print("DEVICE ID: $deviceIdLimpio");
+      debugPrint("RESULTADO QUERY: ${query.docs.length}");
+      debugPrint("DEVICE ID: $deviceIdLimpio");
 
       if (query.docs.isNotEmpty && mounted) {
         var userDoc = query.docs.first.data();
-        print("✅ DATOS RECUPERADOS: ${userDoc['nombre']}"); // Ojo 4
+        debugPrint("✅ DATOS RECUPERADOS: ${userDoc['nombre']}"); // Ojo 4
         setState(() {
           nombreVecinoReal = userDoc['nombre'] ?? nombreVecinoReal;
           telefonoVecinoReal = userDoc['numerodecelular'] ?? telefonoVecinoReal;
@@ -202,10 +202,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
       if (await Vibration.hasVibrator()) {
         Vibration.vibrate(duration: 500);
       }
-      print("NOMBRE: $nombreVecinoReal");
-      print("TEL: $telefonoVecinoReal");
-      print("BARRIO: $barrioReal");
-      print("DOMICILIO: $domicilioReal");
+      debugPrint("NOMBRE: $nombreVecinoReal");
+      debugPrint("TEL: $telefonoVecinoReal");
+      debugPrint("BARRIO: $barrioReal");
+      debugPrint("DOMICILIO: $domicilioReal");
       // 3. Subir a Firebase
       await FirebaseFirestore.instance.collection('servicios').add({
         'tipo': servicioSeleccionado,
