@@ -30,7 +30,8 @@ void main() async {
 
 Future<Widget> verificarUsuario() async {
   final prefs = await SharedPreferences.getInstance();
-
+  bool pendiente = prefs.getBool('registro_pendiente') ?? false;
+  if (pendiente) return const ValidacionPage();
   // 1. Intentamos obtener el ID del dispositivo
   String idCelu = "";
   try {

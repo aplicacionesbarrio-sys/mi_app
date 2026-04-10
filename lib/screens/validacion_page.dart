@@ -51,7 +51,7 @@ class _ValidacionPageState extends State<ValidacionPage> {
         await prefs.setString('estado_usuario', 'validado');
 
         if (!mounted) return;
-
+        await prefs.setBool('registro_pendiente', false);
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const InicioPage()),

@@ -183,6 +183,7 @@ class _RegistroPageState extends State<RegistroPage> {
 
                       // 3. Persistencia local UNIFICADA (SharedPreferences)
                       final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('registro_pendiente', true);
                       await prefs.setString(
                           'nombre', _nombreController.text.trim());
                       await prefs.setString(
