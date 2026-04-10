@@ -19,7 +19,7 @@ class _RegistroPageState extends State<RegistroPage> {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      return androidInfo.id;
+      return androidInfo.model + androidInfo.fingerprint;
     } else if (Platform.isIOS) {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
       return iosInfo.identifierForVendor ?? "desconocido_ios";

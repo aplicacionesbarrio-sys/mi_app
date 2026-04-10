@@ -113,6 +113,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
   @override
   void initState() {
     super.initState();
+    print("🚀🚀🚀 LA PÁGINA DE SERVICIOS SE ABRIÓ 🚀🚀🚀"); // Agregá esto
     _cargarEstadoBloqueos();
     obtenerDatosUsuario();
   }
@@ -124,27 +125,33 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   Future<void> obtenerDatosUsuario() async {
+    print("🔍 INICIANDO BÚSQUEDA DE USUARIO..."); // Ojo 1
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     // Prioridad 1: Cargar lo que tengamos en SharedPreferences para respuesta instantánea
     setState(() {
-      nombreVecinoReal = prefs.getString('nombre_local') ?? "Vecino";
-      telefonoVecinoReal = prefs.getString('tel_local') ?? "Sin Tel";
-      barrioReal = prefs.getString('barrio_local') ?? "No especificado";
-      domicilioReal = prefs.getString('domicilio_local') ?? "No especificado";
+      nombreVecinoReal = prefs.getString('nombre') ?? "Vecino";
+      telefonoVecinoReal = prefs.getString('numerodecelular') ?? "Sin Tel";
+      barrioReal = prefs.getString('barrio') ?? "No especificado";
+      domicilioReal = prefs.getString('domicilio') ?? "No especificado";
     });
 
     try {
       String deviceIdLimpio = await _getDeviceIdLimpio();
-
+      print("🆔 MI ID GENERADO ES: $deviceIdLimpio"); // Ojo 2
       var query = await FirebaseFirestore.instance
           .collection('usuarios')
           .where('deviceId', isEqualTo: deviceIdLimpio)
           .limit(1)
           .get();
+      print(
+          "📊 DOCUMENTOS ENCONTRADOS EN FIREBASE: ${query.docs.length}"); // Ojo
+      print("RESULTADO QUERY: ${query.docs.length}");
+      print("DEVICE ID: $deviceIdLimpio");
 
       if (query.docs.isNotEmpty && mounted) {
         var userDoc = query.docs.first.data();
+        print("✅ DATOS RECUPERADOS: ${userDoc['nombre']}"); // Ojo 4
         setState(() {
           nombreVecinoReal = userDoc['nombre'] ?? nombreVecinoReal;
           telefonoVecinoReal = userDoc['numerodecelular'] ?? telefonoVecinoReal;
@@ -153,10 +160,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
         });
 
         // Actualizar caché
-        await prefs.setString('nombre_local', nombreVecinoReal);
-        await prefs.setString('tel_local', telefonoVecinoReal);
-        await prefs.setString('barrio_local', barrioReal);
-        await prefs.setString('domicilio_local', domicilioReal);
+        await prefs.setString('nombre', nombreVecinoReal);
+        await prefs.setString('numerodecelular', telefonoVecinoReal);
+        await prefs.setString('barrio', barrioReal);
+        await prefs.setString('domicilio', domicilioReal);
       }
     } catch (e) {
       debugPrint("Error sincronizando datos: $e");
@@ -168,13 +175,13 @@ class _ServiciosPageState extends State<ServiciosPage> {
     String id = "";
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      id = androidInfo.model + androidInfo.id;
+      id = androidInfo.model + androidInfo.fingerprint;
     } else {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
       id = iosInfo.identifierForVendor ?? "unknown_ios";
     }
-    final match = RegExp(r'(STAS[\w\.\-]+)').firstMatch(id);
-    return (match != null ? match.group(0)! : id).trim().toUpperCase();
+
+    return id.trim();
   }
 
   void enviarPedido() async {
@@ -195,7 +202,10 @@ class _ServiciosPageState extends State<ServiciosPage> {
       if (await Vibration.hasVibrator()) {
         Vibration.vibrate(duration: 500);
       }
-
+      print("NOMBRE: $nombreVecinoReal");
+      print("TEL: $telefonoVecinoReal");
+      print("BARRIO: $barrioReal");
+      print("DOMICILIO: $domicilioReal");
       // 3. Subir a Firebase
       await FirebaseFirestore.instance.collection('servicios').add({
         'tipo': servicioSeleccionado,
@@ -375,9 +385,7 @@ class _ServiciosPageState extends State<ServiciosPage> {
   }
 
   Widget _buildBotonEnviar() {
-    bool desactivado = servicioSeleccionado.isEmpty ||
-        enviando ||
-        nombreVecinoReal == "Cargando...";
+    bool desactivado = servicioSeleccionado.isEmpty || enviando;
     return Container(
       padding: const EdgeInsets.all(20),
       child: SizedBox(

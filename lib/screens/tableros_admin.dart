@@ -60,6 +60,8 @@ class _TablerosAdminState extends State<TablerosAdmin> {
               "RECLAMOS", "reclamos", Icons.assignment_late, Colors.blue),
           _botonFiltro("ALERTAS", "alertas", Icons.campaign, Colors.red),
           _botonFiltro("SERVICIOS", "servicios", Icons.handyman, Colors.green),
+          _botonFiltro(
+              "PAGOS", "usuarios_pagos", Icons.payments, Colors.orange),
         ],
       ),
     );
@@ -226,33 +228,32 @@ class _TablerosAdminState extends State<TablerosAdmin> {
 
   Widget _botonGestionar(
       String docId, String estadoActual, Map<String, dynamic> datos) {
-    bool esUsuario = coleccionActual == 'usuarios';
+    bool esFabricaCodigos = coleccionActual == 'usuarios';
+    bool esControlPagos = coleccionActual == 'usuarios_pagos';
     String telefono = datos['numerodecelular'] ?? '';
 
     return Column(
       children: [
         ElevatedButton.icon(
-          onPressed: () => esUsuario
+          onPressed: () => esFabricaCodigos
               ? _mostrarFabricaCodigo(docId, telefono)
               : _cambiarEstadoDialog(docId),
           style: ElevatedButton.styleFrom(
             backgroundColor:
-                esUsuario ? Colors.purple : const Color(0xFF4F1E98),
+                esFabricaCodigos ? Colors.purple : const Color(0xFF4F1E98),
             foregroundColor: Colors.white,
             minimumSize: const Size(double.infinity, 45),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          icon: Icon(esUsuario ? Icons.vpn_key : Icons.settings_suggest,
+          icon: Icon(esFabricaCodigos ? Icons.vpn_key : Icons.settings_suggest,
               size: 20),
-          label: Text(esUsuario ? "GENERAR CÓDIGO" : "GESTIONAR ESTADO"),
+          label: Text(esFabricaCodigos ? "GENERAR CÓDIGO" : "GESTIONAR ESTADO"),
         ),
-        if (esUsuario) ...[
-          // --- ESTE ES EL BOTÓN NUEVO ---
 
-          const SizedBox(height: 10), // Un espacio entre los dos botones
-
-          // --- ESTE ES TU BOTÓN DE WHATSAPP QUE YA TENÍAS (No se toca) ---
+        // 🔹 FÁBRICA DE CÓDIGOS (NO SE TOCA)
+        if (esFabricaCodigos) ...[
+          const SizedBox(height: 10),
           ElevatedButton.icon(
             onPressed: () => _lanzarWhatsApp(telefono),
             style: ElevatedButton.styleFrom(
@@ -264,6 +265,23 @@ class _TablerosAdminState extends State<TablerosAdmin> {
             ),
             icon: const Icon(Icons.chat, size: 20),
             label: const Text("WHATSAPP"),
+          ),
+        ],
+
+        // 🔹 CONTROL DE PAGOS (ACÁ ESTÁ LA CLAVE 🔥)
+        if (esControlPagos) ...[
+          const SizedBox(height: 10),
+          ElevatedButton.icon(
+            onPressed: () => _mostrarControlPago(docId),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 45),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            icon: const Icon(Icons.payments),
+            label: const Text("CONTROL DE PAGOS"),
           ),
         ],
       ],
