@@ -1,7 +1,7 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    id "dev.flutter.flutter-gradle-plugin"
+    id "dev.flutter.flutter-gradle-plugin" // <--- Esta línea reemplaza el "apply from"
     id "com.google.gms.google-services"
 }
 
@@ -13,23 +13,31 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
-def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
 
 android {
-    // 🛡️ BLINDAJE: Namespace único para evitar conflictos
+    // IMPORTANTE: Tu namespace correcto
     namespace "com.barriovigilado.barriouroseguro"
-    compileSdkVersion 35
-    ndkVersion flutter.ndkVersion
+    compileSdk flutter.compileSdkVersion
+    
+    // CAMBIO AQUÍ: Pusimos la versión que te pidió Flutter
+    ndkVersion "25.1.8937393"
 
     compileOptions {
-        // 🛡️ BLINDAJE: Forzamos Java 17 para compatibilidad con Firebase
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '1.8'
     }
 
     sourceSets {
@@ -37,26 +45,22 @@ android {
     }
 
     defaultConfig {
+        // Tu ID de aplicación único
         applicationId "com.barriovigilado.barriouroseguro"
         
-        // 🛡️ BLINDAJE: Mínimo SDK 23 para permisos modernos
-        minSdkVersion 23 
-        
-        // 🛡️ CORRECCIÓN: Forzamos 35 para que los plugins nuevos no reboten
-        targetSdkVersion 35 
-        
+        // Subimos a 21 para compatibilidad con Maps y Firebase
+        minSdkVersion 21
+        targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
-        
-        // 🛡️ BLINDAJE: Evita errores por exceso de librerías
+
+        // Activamos multidex para evitar errores de exceso de métodos
         multiDexEnabled true
     }
 
     buildTypes {
         release {
             signingConfig signingConfigs.debug
-            minifyEnabled false
-            shrinkResources false
         }
     }
 }
@@ -66,9 +70,6 @@ flutter {
 }
 
 dependencies {
-    // 🛡️ BLINDAJE: Versión estable de MultiDex
-    implementation 'androidx.multidex:multidex:2.0.1'
+    // Implementación necesaria para Multidex
+    implementation 'com.android.support:multidex:1.0.3'
 }
-
-// 🛡️ BLINDAJE: Doble verificación para los servicios de Google
-apply plugin: 'com.google.gms.google-services'

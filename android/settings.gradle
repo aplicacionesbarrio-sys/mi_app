@@ -1,18 +1,13 @@
 pluginManagement {
     def flutterSdkPath = {
         def properties = new Properties()
-        // 🛡️ BLINDAJE: Agregamos una verificación por si el archivo no existe
-        def propsFile = file("local.properties")
-        if (propsFile.exists()) {
-            propsFile.withInputStream { properties.load(it) }
-        }
+        file("local.properties").withInputStream { properties.load(it) }
         def flutterSdkPath = properties.getProperty("flutter.sdk")
-        assert flutterSdkPath != null, "flutter.sdk not set in local.properties. Por favor, corre 'flutter pub get'"
+        assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
         return flutterSdkPath
-    }
-    settings.ext.flutterSdkPath = flutterSdkPath()
+    }()
 
-    includeBuild("${settings.ext.flutterSdkPath}/packages/flutter_tools/gradle")
+    includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
 
     repositories {
         google()
@@ -23,15 +18,10 @@ pluginManagement {
 
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-    // 🛡️ BLINDAJE: Subimos a la 7.3.1 para mejor estabilidad con Kotlin 1.9
-    id "com.android.application" version "7.3.1" apply false
-    
-    // 🛡️ BLINDAJE: Sincronizamos con la versión 4.4.1 que pusimos en el build.gradle
-    // Esto evita el error de "Versiones de Google Services no coinciden"
-    id "com.google.gms.google-services" version "4.4.1" apply false
-    
-    // 🛡️ BLINDAJE: Mantenemos tu Kotlin 1.9.24 que es excelente
+    id "com.android.application" version "8.2.1" apply false
     id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+    id "com.google.gms.google-services" version "4.4.1" apply false
 }
 
 include ":app"
+// AQUÍ TERMINA EL ARCHIVO. Borrá todo lo que tenías abajo.
